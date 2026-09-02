@@ -20,6 +20,8 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 | `APORTE_INCOHERENTE` | El aporte no guarda relación con remuneración × alícuota | advertencia |
 | `SIN_PARAMETRO_BASE_MINIMA` | Períodos sin base mínima cargada: **no se emitió juicio** | advertencia |
 | `PARAMETROS_NO_VERIFICADOS` | Se usaron valores que nadie cotejó contra la norma | advertencia |
+| `MAS_QUE_ANSES` | Meses que el sistema computa y el resumen de ANSES no reconoce | advertencia |
+| `MENOS_QUE_ANSES` | Meses que ANSES reconoce y el sistema no computó (posible error de lectura) | advertencia |
 | `LAGUNA_PREVISIONAL` | Meses sin servicios computables entre el primer y el último aporte | información |
 | `EMPLEOS_SIMULTANEOS` | Meses con más de un empleador (se computan una sola vez) | información |
 | `CUIL_INVALIDO` / `SIN_REGISTROS` | Problemas con el dato de entrada | error |
@@ -34,20 +36,36 @@ consolidado de antigüedad sin duplicar meses de empleo simultáneo.
 
 ### 1. Importar la historia laboral descargada — **recomendado**
 
-Descargás la historia laboral desde Mi ANSES y la importás. Es estable, no toca
+Descargás el HLAB desde Mi ANSES y lo importás. Es estable, no toca
 credenciales, no depende del HTML del portal y deja el archivo original como
 respaldo del informe.
 
 ```bash
 ayudante-contable analizar \
   --cuil 20-12345678-6 \
-  --nombre "PEREZ, JUAN CARLOS" \
-  --planilla historia_laboral.csv \
+  --pdf HLAB_20123456786.pdf \
   --todo
 ```
 
-Acepta CSV, TSV, XLSX y PDF (`--pdf`). El mapeo de columnas tolera los nombres
-habituales en castellano, con o sin tildes y en cualquier orden.
+El PDF del HLAB se reconoce solo y se lee con un lector específico que entiende
+sus secciones reales (ver más abajo). También acepta planillas con `--planilla`
+(CSV, TSV, XLSX), con mapeo de columnas tolerante a los nombres habituales en
+castellano, con o sin tildes y en cualquier orden. `--pdf-generico` fuerza el
+lector genérico si alguna vez hiciera falta.
+
+### Muchos clientes de una vez
+
+```bash
+ayudante-contable lote --padron clientes.csv --todo
+```
+
+El padrón es un CSV con una columna `cuil` y, opcionalmente, `nombre` y
+`archivo`. Un expediente que falla **no corta el lote**: se procesan todos y al
+final sale el resumen, con los fallidos separados de los que salieron limpios.
+Genera además un índice CSV y un índice HTML navegable con enlace al informe de
+cada cliente.
+
+Un expediente que no se pudo procesar nunca se cuenta como "en orden".
 
 ### 2. Entrar al portal con las credenciales del cliente
 
@@ -78,50 +96,75 @@ mano e importar con `analizar`. El motor de control es el mismo.
 
 ---
 
+## Qué puede y qué no puede probar el HLAB
+
+Esto es lo más importante de entender antes de usar el informe, y sale de leer
+un HLAB real renglón por renglón.
+
+**El HLAB no informa lo mismo para todos los regímenes.**
+
+| Régimen | Qué trae el documento | Qué se puede afirmar |
+|---|---|---|
+| Relación de dependencia | Remuneración **declarada** por el empleador, mes a mes | Que se declaró, y si la remuneración imponible alcanzó el mínimo. **No** si el aporte ingresó. |
+| Autónomos | Alta en el padrón + `DETALLE DE PAGOS` con fecha de depósito y acreditación | Que el aporte **ingresó o no ingresó**, mes a mes. |
+| Monotributo | Alta en el padrón; el detalle de pagos puede venir **vacío** | Si no hay tabla de pagos: nada sobre el ingreso. Queda «sin dato». |
+
+De ahí salen tres reglas que el sistema aplica y conviene tener presentes:
+
+1. **Los meses en relación de dependencia quedan con ingreso «sin dato»**, no
+   como "ingresados". Para confirmarlos hace falta la constancia de pago del
+   empleador. El informe lo dice en cada corrida.
+2. **Un padrón sin detalle de pagos no prueba deuda**: prueba que el documento
+   no informa esos pagos. Marcar deuda con eso sería inventar un reclamo.
+3. **La columna que vale para el mínimo es `REM IMP. SS`, no `REM TOTAL`.** La
+   primera ya viene topeada por ANSES. Por eso la tabla de parámetros carga
+   también el **tope máximo**: sin él, todo sueldo alto daría falso positivo.
+
+**El contraste contra el propio ANSES.** El HLAB trae su `RESUMEN HISTORIA
+LABORAL`, que es la antigüedad según ANSES. El sistema la compara con la que
+calcula y reporta las diferencias en los dos sentidos. Sobre un caso real: ANSES
+reconocía 288 meses y el sistema computaba 330, sin que faltara ninguno de los
+que ANSES sí reconoce. Esos 42 meses de diferencia son exactamente los que están
+en discusión — y son los que hay que mirar.
+
+---
+
 ## Antes de analizar: cargá los parámetros
 
-**La herramienta no trae ninguna cifra legal incorporada, a propósito.** Un
-informe previsional no puede apoyarse en números que un programa inventó. La
-base imponible mínima y las alícuotas se cargan en una tabla que mantiene y
-audita el estudio.
+El repositorio trae la tabla oficial de bases imponibles cargada:
+**82 tramos que cubren 04/1994 a 03/2026 sin huecos**, cada uno con su mínimo,
+su máximo y la norma que lo fija (Res. S.S.S., decretos y resoluciones ANSES).
+Salió del ANEXO «Remuneración Imponible – Monto Mínimo y Máximo».
+
+**Todos los tramos vienen con `"verificado": false.`** La extracción del PDF fue
+automática: nadie del estudio la cotejó todavía. El sistema los usa igual, pero
+avisa con `PARAMETROS_NO_VERIFICADOS` en cada corrida hasta que los marques.
 
 ```bash
-# Genera una plantilla vacía en tu carpeta de trabajo
-ayudante-contable parametros plantilla
-
-# Revisa qué tenés cargado y qué falta verificar
-ayudante-contable parametros verificar
+ayudante-contable parametros verificar   # cobertura y qué falta verificar
+ayudante-contable parametros plantilla   # tabla vacía, si preferís cargarla vos
 ```
 
-La tabla es un JSON con tramos:
+Cada tramo se ve así:
 
 ```json
 {
-  "version": 1,
-  "bases_minimas": [
-    {
-      "desde": "202401",
-      "hasta": "202406",
-      "valor": "59668.54",
-      "norma": "Res. ANSES .../2024 — tabla de topes y bases imponibles",
-      "verificado": true
-    }
-  ],
-  "alicuotas_personales": [
-    { "desde": "199407", "hasta": null, "sipa": "0.11", "inssjp": "0.03",
-      "norma": "Ley 24.241 art. 11 / Ley 19.032", "verificado": true }
-  ]
+  "desde": "202603",
+  "hasta": "202603",
+  "valor": "124481.49",
+  "maximo": "4045590.45",
+  "norma": "Res ANSES 38/2026",
+  "verificado": false
 }
 ```
 
-Dónde conseguir los valores: las resoluciones de movilidad de ANSES y la tabla
-de topes y bases imponibles que publica ARCA/AFIP. El campo `norma` es para que
-dentro de dos años sepas de dónde salió cada número, y `verificado` para dejar
-constancia de que alguien lo cotejó.
+Para mantenerla: cada resolución nueva de movilidad agrega un tramo. Cerrá el
+`hasta` del anterior; solo el último puede quedar abierto con `null`.
 
 **Un período sin base cargada no se juzga**: aparece como
 `SIN_PARAMETRO_BASE_MINIMA` en lugar de pasar en silencio. Ese es el
 comportamiento buscado — un falso "todo en orden" es peor que un dato faltante.
+Hoy eso alcanza a los períodos posteriores a 03/2026.
 
 Para probar el flujo sin cargar nada hay un archivo de demostración con importes
 inventados y redondos:
@@ -194,6 +237,7 @@ datos personales son del estudio.
 
 ```
 ayudante-contable analizar    Analiza una historia laboral ya descargada
+ayudante-contable lote        Procesa muchos clientes desde un padrón CSV
 ayudante-contable anses       Entra al portal Mi ANSES y descarga la historia
 ayudante-contable boveda      Administra credenciales cifradas
 ayudante-contable parametros  Revisa o genera la tabla de parámetros
@@ -250,6 +294,9 @@ Decisiones que toma la herramienta y conviene conocer antes de firmar un informe
   no ingresó. Un ingreso parcial o sin dato **se computa igual, pero queda
   señalado** como "mes con reservas": el criterio conservador sería descartarlo,
   pero eso escondería el problema en lugar de mostrarlo.
+- **Un mes cuenta aunque no traiga remuneración** si la fuente lo reconoce como
+  servicio: los anteriores a 06/94 y los períodos de autónomo se informan sin
+  sueldo, y descartarlos le borraría antigüedad al afiliado.
 - **Los empleos simultáneos suman un solo mes** de antigüedad, aunque figuren
   dos empleadores.
 - **Un tramo se corta** cuando hay un mes sin declarar. Si tu criterio es otro,
@@ -267,8 +314,10 @@ Decisiones que toma la herramienta y conviene conocer antes de firmar un informe
 python -m unittest discover -s tests -t .
 ```
 
-150 pruebas, sin dependencias externas más allá de `cryptography` para las de la
-bóveda.
+196 pruebas, sin dependencias externas más allá de `cryptography` para las de la
+bóveda. Incluyen un HLAB sintético (`tests/hlab_ejemplo.txt`) que reproduce el
+formato real —secciones, columnas pegadas, renglones vacíos— con datos
+inventados: ninguna historia laboral de un cliente entra al repositorio.
 
 Estructura:
 
@@ -279,8 +328,10 @@ ayudante_contable/
   analisis/evaluacion.py   Juicio mes a mes (mínimo, coherencia, ingreso)
   analisis/linea_servicios.py  Tramos, consolidado y lagunas
   analisis/validador.py    Controles y agrupamiento de hallazgos
+  fuentes/hlab_anses.py    Lector del HLAB de ANSES, sección por sección
   fuentes/planilla.py      Importación CSV/TSV/XLSX
-  fuentes/pdf_anses.py     Importación PDF (tablas y texto)
+  fuentes/pdf_anses.py     Importación PDF genérica (tablas y texto)
+  lote.py                  Procesamiento por lote, aislando cada expediente
   fuentes/mianses_web.py   Portal Mi ANSES con persona en el circuito
   seguridad/               Bóveda cifrada, redacción de secretos, auditoría
   reportes/                Consola, HTML, CSV y JSON
@@ -295,8 +346,14 @@ ayudante_contable/
 - El parser de PDF por texto es heurístico. Cuando lo usa, el informe lo avisa y
   pide cotejar una muestra contra el original.
 - Un PDF escaneado sin capa de texto no se puede leer: necesita OCR previo.
-- La tabla de parámetros llega vacía y **es responsabilidad del estudio
-  cargarla y verificarla**.
+- La tabla de parámetros llega cargada pero **sin verificar**: cotejarla contra
+  las normas citadas es responsabilidad del estudio.
+- Cubre hasta 03/2026. Los períodos posteriores no se juzgan hasta que se
+  agreguen los tramos nuevos.
+- El lector del HLAB se calibró contra un documento real. Si ANSES cambia el
+  formato, hay que ajustar las expresiones de `fuentes/hlab_anses.py`; el
+  sistema avisa cuando no reconoce renglones en vez de devolver un informe
+  incompleto en silencio.
 - La herramienta controla consistencia sobre los datos que entrega la fuente. Si
   ANSES tiene mal un dato de origen, esto no lo puede saber.
 

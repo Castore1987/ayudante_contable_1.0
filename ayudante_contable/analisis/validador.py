@@ -39,6 +39,8 @@ CODIGOS = {
     "LAGUNA_PREVISIONAL": "Meses sin servicios entre el primer y el último aporte.",
     "EMPLEOS_SIMULTANEOS": "Meses con más de un empleador declarando a la vez.",
     "TRAMO_INTERRUMPIDO": "Tramo con meses sin declaración en el medio.",
+    "MENOS_QUE_ANSES": "Meses que ANSES reconoce y el sistema no computó.",
+    "MAS_QUE_ANSES": "Meses computados que ANSES no reconoce en su resumen.",
 }
 
 
@@ -224,12 +226,12 @@ def _control_ingreso(evaluaciones: list[EvaluacionRegistro]) -> list[Hallazgo]:
 
     hallazgos += _hallazgos_por_empleador(
         evaluaciones,
-        lambda e: e.no_ingresado and e.registro.tiene_remuneracion,
+        lambda e: e.no_ingresado and e.registro.hay_servicio,
         "APORTE_NO_INGRESADO",
         Severidad.ERROR,
         lambda emp, grupo: (
-            f"{emp}: {len(grupo)} mes(es) con remuneración declarada y sin aporte "
-            "ingresado. Esos meses no computan como servicio con aportes."
+            f"{emp}: {len(grupo)} mes(es) con servicio declarado y sin aporte ingresado. "
+            "Esos meses no computan como servicio con aportes."
         ),
     )
 
@@ -245,7 +247,7 @@ def _control_ingreso(evaluaciones: list[EvaluacionRegistro]) -> list[Hallazgo]:
 
     hallazgos += _hallazgos_por_empleador(
         evaluaciones,
-        lambda e: e.ingreso_incierto and e.registro.tiene_remuneracion,
+        lambda e: e.ingreso_incierto and e.registro.hay_servicio,
         "APORTE_INGRESO_INCIERTO",
         Severidad.ADVERTENCIA,
         lambda emp, grupo: (
@@ -287,7 +289,7 @@ def _control_lagunas(linea: LineaServicios) -> list[Hallazgo]:
 def _control_simultaneidad(evaluaciones: list[EvaluacionRegistro]) -> list[Hallazgo]:
     por_periodo: dict[Periodo, set[str]] = {}
     for evaluacion in evaluaciones:
-        if evaluacion.registro.tiene_remuneracion:
+        if evaluacion.registro.hay_servicio:
             por_periodo.setdefault(evaluacion.periodo, set()).add(
                 evaluacion.registro.clave_empleador
             )
@@ -306,6 +308,61 @@ def _control_simultaneidad(evaluaciones: list[EvaluacionRegistro]) -> list[Halla
         )
         for inicio, fin in _agrupar_rangos(simultaneos)
     ]
+
+
+def _control_contraste(
+    historia: HistoriaLaboral, evaluaciones: list[EvaluacionRegistro]
+) -> list[Hallazgo]:
+    """Contrasta el cómputo propio contra la línea que declara la fuente.
+
+    El HLAB trae su propio RESUMEN: la antigüedad según ANSES. Compararla con
+    la calculada es el control más barato y más útil del informe. Una
+    diferencia no significa que alguno esté mal: significa que hay meses en
+    discusión, y son justo los que hay que mirar.
+    """
+    if not historia.tramos_declarados:
+        return []
+
+    meses_fuente: set[Periodo] = set()
+    for tramo in historia.tramos_declarados:
+        meses_fuente |= set(Periodo.rango(tramo.desde, tramo.hasta))
+    if not meses_fuente:
+        return []
+
+    meses_propios = {e.periodo for e in evaluaciones if e.computa_servicio}
+
+    hallazgos: list[Hallazgo] = []
+    for inicio, fin in _agrupar_rangos(meses_fuente - meses_propios):
+        hallazgos.append(
+            Hallazgo(
+                codigo="MENOS_QUE_ANSES",
+                severidad=Severidad.ADVERTENCIA,
+                mensaje=(
+                    f"{fin.ordinal - inicio.ordinal + 1} mes(es) que el resumen de "
+                    "ANSES reconoce y el sistema no computó. Revisá si se perdió "
+                    "algún renglón al leer el documento."
+                ),
+                periodo=inicio,
+                periodo_fin=fin,
+            )
+        )
+
+    for inicio, fin in _agrupar_rangos(meses_propios - meses_fuente):
+        hallazgos.append(
+            Hallazgo(
+                codigo="MAS_QUE_ANSES",
+                severidad=Severidad.ADVERTENCIA,
+                mensaje=(
+                    f"{fin.ordinal - inicio.ordinal + 1} mes(es) computados que el "
+                    "resumen de ANSES no reconoce. Son los meses en discusión: "
+                    "salvo que aparezca el respaldo del aporte, ANSES no los va a contar."
+                ),
+                periodo=inicio,
+                periodo_fin=fin,
+            )
+        )
+
+    return hallazgos
 
 
 def _control_tramos(linea: LineaServicios) -> list[Hallazgo]:
@@ -357,6 +414,7 @@ def analizar(historia: HistoriaLaboral, parametros: ParametrosPrevisionales) -> 
         hallazgos += _control_lagunas(linea)
         hallazgos += _control_simultaneidad(evaluaciones)
         hallazgos += _control_tramos(linea)
+        hallazgos += _control_contraste(historia, evaluaciones)
 
     for advertencia in historia.advertencias_origen:
         hallazgos.append(

@@ -30,6 +30,7 @@ class EvaluacionRegistro:
     desvio_relativo: Decimal | None
     aporte_incoherente: bool
     estado_ingreso: EstadoIngreso
+    topeada: bool = False
 
     # ------------------------------------------------------------- derivados
     @property
@@ -61,7 +62,7 @@ class EvaluacionRegistro:
         Un ingreso parcial o incierto se cuenta, pero queda señalado para que
         el profesional decida.
         """
-        if not self.registro.tiene_remuneracion:
+        if not self.registro.hay_servicio:
             return False
         return not self.no_ingresado
 
@@ -93,7 +94,7 @@ def _resolver_estado_ingreso(
             # Sin remuneración declarada, un ingreso en cero no es una deuda.
             return (
                 EstadoIngreso.NO_INGRESADO
-                if registro.tiene_remuneracion
+                if registro.hay_servicio
                 else EstadoIngreso.DESCONOCIDO
             )
         declarado = registro.aporte_declarado
@@ -122,13 +123,21 @@ def evaluar_registro(
             bajo_minimo = True
             faltante = base.valor - registro.remuneracion_imponible
 
+    topeada = bool(
+        base is not None
+        and base.maximo is not None
+        and registro.remuneracion_imponible >= base.maximo
+    )
+
     aporte_esperado: Decimal | None = None
     desvio: Decimal | None = None
     incoherente = False
     if alicuota is not None and registro.tiene_remuneracion:
-        aporte_esperado = (registro.remuneracion_imponible * alicuota.sipa).quantize(
-            Decimal("0.01")
-        )
+        # La base de cálculo nunca supera el tope del período.
+        base_calculo = registro.remuneracion_imponible
+        if base is not None and base.maximo is not None:
+            base_calculo = min(base_calculo, base.maximo)
+        aporte_esperado = (base_calculo * alicuota.sipa).quantize(Decimal("0.01"))
         declarado = registro.aporte_declarado
         if declarado is not None and aporte_esperado > CERO:
             desvio = (declarado - aporte_esperado) / aporte_esperado
@@ -146,6 +155,7 @@ def evaluar_registro(
         desvio_relativo=desvio,
         aporte_incoherente=incoherente,
         estado_ingreso=estado,
+        topeada=topeada,
     )
 
 

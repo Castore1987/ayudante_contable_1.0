@@ -18,6 +18,7 @@ from .analisis.parametros import ErrorParametros, ParametrosPrevisionales
 from .analisis.validador import Informe, analizar
 from .config import VARIABLES_ENTORNO, Configuracion
 from .fuentes.base import CredencialesANSES, ErrorFuente
+from .lote import ErrorLote
 from .modelo.dominio import formatear_cuil, normalizar_cuil
 from .reportes import consola, exportar, html
 from .seguridad.auditoria import RegistroAuditoria
@@ -73,8 +74,17 @@ def _pedir_clave(cuil: str) -> str:
 # -------------------------------------------------------------------- comandos
 
 
-def comando_analizar(args) -> int:
+def _leer_pdf(ruta: Path, cuil: str, nombre: str | None, forzar_generico: bool):
+    """Usa el lector del HLAB de ANSES cuando el PDF tiene esa estructura."""
+    from .fuentes.hlab_anses import es_hlab, leer_hlab
     from .fuentes.pdf_anses import leer_pdf_historia_laboral
+
+    if not forzar_generico and es_hlab(ruta):
+        return leer_hlab(ruta, cuil, nombre)
+    return leer_pdf_historia_laboral(ruta, cuil, nombre)
+
+
+def comando_analizar(args) -> int:
     from .fuentes.planilla import leer_planilla
 
     config = Configuracion.cargar(args.dir).preparar()
@@ -84,7 +94,7 @@ def comando_analizar(args) -> int:
     if args.planilla:
         historia = leer_planilla(args.planilla, cuil, args.nombre)
     else:
-        historia = leer_pdf_historia_laboral(args.pdf, cuil, args.nombre)
+        historia = _leer_pdf(args.pdf, cuil, args.nombre, args.pdf_generico)
 
     informe = analizar(historia, parametros)
 
@@ -161,6 +171,68 @@ def comando_anses(args) -> int:
         "analisis.portal", cuil, periodos=str(len(historia)), errores=str(len(informe.errores))
     )
     return _emitir(informe, args, config)
+
+
+def comando_lote(args) -> int:
+    from .lote import leer_padron, procesar_lote
+    from .reportes import lote as reporte_lote
+
+    config = Configuracion.cargar(args.dir).preparar()
+    parametros = _cargar_parametros(args.parametros, config)
+    clientes = leer_padron(args.padron)
+    auditoria = RegistroAuditoria(config.auditoria)
+    destino = Path(args.salida).expanduser() if args.salida else config.informes
+
+    print(f"Procesando {len(clientes)} expediente(s)…\n")
+
+    def obtener(cliente):
+        if cliente.archivo is None:
+            raise ErrorFuente(
+                "El padrón no indica archivo para este cliente. Agregá la "
+                "columna 'archivo' con la ruta a su historia laboral."
+            )
+        if cliente.archivo.suffix.lower() == ".pdf":
+            return _leer_pdf(cliente.archivo, cliente.cuil, cliente.nombre, False)
+        from .fuentes.planilla import leer_planilla
+
+        return leer_planilla(cliente.archivo, cliente.cuil, cliente.nombre)
+
+    def exportar_uno(informe, cliente):
+        if not (args.csv or args.html or args.json or args.todo):
+            return []
+        generados = []
+        marca = cliente.cuil
+        if args.csv or args.todo:
+            generados.append(
+                exportar.exportar_linea_servicios(informe, destino / f"{marca}-linea-servicios.csv")
+            )
+        if args.html or args.todo:
+            generados.append(html.exportar_html(informe, destino / f"{marca}-informe.html"))
+        if args.json or args.todo:
+            generados.append(exportar.exportar_json(informe, destino / f"{marca}-informe.json"))
+        return generados
+
+    def avisar(resultado):
+        icono = {"en orden": "·", "con errores": "✗", "no procesado": "!"}[resultado.estado]
+        print(f"  {icono} {resultado.cliente.etiqueta}  →  {resultado.estado}")
+
+    resumen = procesar_lote(
+        clientes,
+        parametros,
+        obtener_historia=obtener,
+        exportar=exportar_uno,
+        al_terminar_cliente=avisar,
+        auditoria=auditoria,
+        pausa_segundos=args.pausa,
+    )
+
+    reporte_lote.imprimir_lote(resumen)
+
+    indice_csv = reporte_lote.exportar_indice_csv(resumen, destino / "lote-indice.csv")
+    indice_html = reporte_lote.exportar_indice_html(resumen, destino / "lote-indice.html")
+    print(f"Índice del lote:\n  · {indice_csv}\n  · {indice_html}")
+
+    return HALLAZGOS if resumen.requiere_atencion else OK
 
 
 def comando_boveda(args) -> int:
@@ -303,7 +375,14 @@ def construir_parser() -> argparse.ArgumentParser:
     analizar_sub.add_argument("--cuil", required=True)
     origen = analizar_sub.add_mutually_exclusive_group(required=True)
     origen.add_argument("--planilla", type=Path, help="Archivo CSV/XLSX exportado de ANSES.")
-    origen.add_argument("--pdf", type=Path, help="PDF de historia laboral.")
+    origen.add_argument(
+        "--pdf", type=Path, help="PDF de historia laboral (reconoce el HLAB de ANSES)."
+    )
+    analizar_sub.add_argument(
+        "--pdf-generico",
+        action="store_true",
+        help="Forzar el lector de PDF genérico en vez del específico del HLAB.",
+    )
     _agregar_opciones_salida(analizar_sub)
     analizar_sub.set_defaults(func=comando_analizar)
 
@@ -333,6 +412,25 @@ def construir_parser() -> argparse.ArgumentParser:
     anses_sub.add_argument("--selectores", type=Path, help="Archivo de selectores del portal.")
     _agregar_opciones_salida(anses_sub)
     anses_sub.set_defaults(func=comando_anses)
+
+    # lote -------------------------------------------------------------------
+    lote_sub = subparsers.add_parser(
+        "lote", help="Procesa muchos clientes de una pasada desde un padrón CSV."
+    )
+    lote_sub.add_argument(
+        "--padron",
+        type=Path,
+        required=True,
+        help="CSV con una columna 'cuil' y, opcionalmente, 'nombre' y 'archivo'.",
+    )
+    lote_sub.add_argument(
+        "--pausa",
+        type=float,
+        default=0.0,
+        help="Segundos de espera entre expedientes (para no saturar un servicio externo).",
+    )
+    _agregar_opciones_salida(lote_sub)
+    lote_sub.set_defaults(func=comando_lote)
 
     # boveda -----------------------------------------------------------------
     boveda_sub = subparsers.add_parser("boveda", help="Administra credenciales cifradas.")
@@ -373,7 +471,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return args.func(args)
-    except (ErrorFuente, ErrorBoveda, ErrorParametros, ValueError) as exc:
+    except (ErrorFuente, ErrorBoveda, ErrorParametros, ErrorLote, ValueError) as exc:
         print(f"\n✗ {redactar(exc)}", file=sys.stderr)
         return FALLA
     except KeyboardInterrupt:  # pragma: no cover

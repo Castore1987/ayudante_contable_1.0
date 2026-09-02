@@ -46,11 +46,18 @@ def _a_decimal(valor: Any, campo: str) -> Decimal:
 
 @dataclass(frozen=True)
 class TramoParametro:
-    """Base imponible mínima vigente entre ``desde`` y ``hasta`` (inclusive)."""
+    """Bases imponibles vigentes entre ``desde`` y ``hasta`` (inclusive).
+
+    ``valor`` es el mínimo y ``maximo`` el tope. El tope importa tanto como el
+    mínimo: la remuneración imponible que informa ANSES ya viene topeada, así
+    que sin él cualquier control de coherencia contra la remuneración total
+    marcaría como error a todos los sueldos altos.
+    """
 
     desde: Periodo
     hasta: Periodo | None
     valor: Decimal
+    maximo: Decimal | None = None
     norma: str = ""
     verificado: bool = False
 
@@ -198,6 +205,11 @@ class ParametrosPrevisionales:
                 desde=Periodo.desde_valor(item["desde"]),
                 hasta=Periodo.desde_valor(item["hasta"]) if item.get("hasta") else None,
                 valor=_a_decimal(item["valor"], "bases_minimas.valor"),
+                maximo=(
+                    _a_decimal(item["maximo"], "bases_minimas.maximo")
+                    if item.get("maximo") is not None
+                    else None
+                ),
                 norma=str(item.get("norma", "")),
                 verificado=bool(item.get("verificado", False)),
             )
@@ -230,6 +242,7 @@ class ParametrosPrevisionales:
                     "desde": t.desde.compacto,
                     "hasta": t.hasta.compacto if t.hasta else None,
                     "valor": str(t.valor),
+                    "maximo": str(t.maximo) if t.maximo is not None else None,
                     "norma": t.norma,
                     "verificado": t.verificado,
                 }

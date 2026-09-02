@@ -203,6 +203,7 @@ class RegistroMensual:
     aporte_declarado: Decimal | None = None
     aporte_ingresado: Decimal | None = None
     estado_ingreso: EstadoIngreso = EstadoIngreso.DESCONOCIDO
+    servicio_reconocido: bool = False
     observaciones: str = ""
 
     @property
@@ -227,6 +228,16 @@ class RegistroMensual:
     def tiene_remuneracion(self) -> bool:
         return self.remuneracion_imponible > 0
 
+    @property
+    def hay_servicio(self) -> bool:
+        """El mes registra servicio, con o sin dato de remuneración.
+
+        Los servicios anteriores a 06/94 y los períodos de autónomo se informan
+        sin remuneración: son meses de servicio igual, y no computarlos sería
+        borrarle antigüedad al afiliado.
+        """
+        return self.tiene_remuneracion or self.servicio_reconocido
+
 
 @dataclass
 class HistoriaLaboral:
@@ -238,6 +249,9 @@ class HistoriaLaboral:
     fecha_consulta: str | None = None
     fuente: str = "desconocida"
     advertencias_origen: list[str] = field(default_factory=list)
+    # Línea de servicios tal como la declara la fuente (el RESUMEN del HLAB),
+    # para contrastarla con la que calcula el sistema.
+    tramos_declarados: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.cuil = normalizar_cuil(self.cuil)

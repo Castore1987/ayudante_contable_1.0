@@ -211,7 +211,7 @@ def construir_linea_servicios(
             )
             if evaluacion.computa_con_reservas:
                 meses_con_reservas.add(periodo)
-        elif evaluacion.registro.tiene_remuneracion:
+        elif evaluacion.registro.hay_servicio:
             meses_descartados.add(periodo)
 
     # Un mes con un empleador que sí ingresó deja de estar "descartado".

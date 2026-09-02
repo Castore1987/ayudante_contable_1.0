@@ -12,7 +12,7 @@ from ayudante_contable.cli import FALLA, HALLAZGOS, OK, main
 RAIZ = Path(__file__).resolve().parents[1]
 EJEMPLO = RAIZ / "ejemplos" / "historia_laboral_ejemplo.csv"
 PARAMETROS_EJEMPLO = RAIZ / "datos" / "parametros_previsionales.ejemplo.json"
-PARAMETROS_VACIOS = RAIZ / "datos" / "parametros_previsionales.json"
+PARAMETROS_REPO = RAIZ / "datos" / "parametros_previsionales.json"
 CUIL = "20-12345678-6"
 
 
@@ -89,11 +89,13 @@ class PruebasAnalizar(unittest.TestCase):
         self.assertNotIn("20-12345678-6", registro)
 
     def test_sin_parametros_cargados_avisa_en_lugar_de_callarse(self):
+        vacios = self.trabajo / "vacios.json"
+        correr("--dir", str(self.trabajo), "parametros", "plantilla", "--destino", str(vacios))
         codigo, salida = correr(
             "--dir", str(self.trabajo),
             "analizar", "--cuil", CUIL,
             "--planilla", str(EJEMPLO),
-            "--parametros", str(PARAMETROS_VACIOS),
+            "--parametros", str(vacios),
         )
         self.assertIn("PARAMETROS_SIN_CARGAR", salida)
         # Sin bases cargadas no se juzga el mínimo, pero el control de ingreso
@@ -132,12 +134,24 @@ class PruebasParametros(unittest.TestCase):
         self.assertIn("sin verificar", salida)
 
     def test_verificar_avisa_cuando_la_tabla_esta_vacia(self):
+        vacios = self.trabajo / "vacios.json"
+        correr("--dir", str(self.trabajo), "parametros", "plantilla", "--destino", str(vacios))
         codigo, salida = correr(
             "--dir", str(self.trabajo),
-            "parametros", "verificar", "--parametros", str(PARAMETROS_VACIOS),
+            "parametros", "verificar", "--parametros", str(vacios),
         )
         self.assertEqual(codigo, HALLAZGOS)
         self.assertIn("no corre", salida)
+
+    def test_verificar_informa_la_cobertura_de_la_tabla_del_repo(self):
+        codigo, salida = correr(
+            "--dir", str(self.trabajo),
+            "parametros", "verificar", "--parametros", str(PARAMETROS_REPO),
+        )
+        self.assertEqual(codigo, HALLAZGOS)   # cargada pero sin verificar
+        self.assertIn("04/1994", salida)
+        self.assertIn("03/2026", salida)
+        self.assertIn("82", salida)
 
     def test_plantilla_crea_un_archivo_editable(self):
         destino = self.trabajo / "p.json"

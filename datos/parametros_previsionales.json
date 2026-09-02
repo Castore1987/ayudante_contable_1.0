@@ -1,26 +1,694 @@
 {
   "version": 1,
   "_lea_esto": [
-    "Este archivo se entrega VACÍO a propósito.",
-    "El ayudante contable no inventa cifras legales: la base imponible mínima y",
-    "las alícuotas las carga el estudio desde la fuente oficial y quedan auditadas",
-    "acá, con la norma que las respalda.",
+    "Bases imponibles mínima y máxima del SIPA, período por período.",
     "",
-    "Dónde conseguir los valores:",
-    "  - Base imponible mínima (art. 9 Ley 24.241): resoluciones de movilidad de",
-    "    ANSES y tabla de topes y bases imponibles publicada por ARCA/AFIP.",
-    "  - Alícuotas de aporte personal: Ley 24.241 art. 11 y Ley 19.032 (INSSJP).",
+    "ORIGEN: ANEXO 'Remuneración Imponible - Monto Mínimo y Máximo' aportado por",
+    "el estudio (tabla oficial de topes). Cubre 04/1994 a 03/2026 sin huecos.",
+    "Cada tramo cita la norma que lo fija.",
     "",
-    "Mientras un período no tenga base cargada, el validador lo informa como",
-    "SIN_PARAMETRO_BASE_MINIMA y NO emite juicio sobre ese mes.",
+    "TODOS LOS TRAMOS ESTÁN EN 'verificado': false. La extracción desde el PDF fue",
+    "automática y nadie del estudio la coteja todavía. El informe los usa igual,",
+    "pero avisa con PARAMETROS_NO_VERIFICADOS en cada corrida. A medida que",
+    "verifiques un tramo contra la norma citada, poné 'verificado': true.",
     "",
-    "Formato de período: 'AAAAMM' (ej. '202401') o 'MM/AAAA'.",
-    "'hasta': null solo se admite en el último tramo (tramo abierto vigente).",
-    "Marcá 'verificado': true únicamente cuando alguien del estudio cotejó el",
-    "valor contra la norma citada."
+    "PARA MANTENERLA: cada resolución nueva de movilidad agrega un tramo. Cerrá el",
+    "'hasta' del tramo anterior; solo el último puede quedar abierto con null.",
+    "Un período posterior a 03/2026 sin tramo cargado se informa como",
+    "SIN_PARAMETRO_BASE_MINIMA y NO se juzga: es a propósito.",
+    "",
+    "'valor' es el mínimo y 'maximo' el tope. El tope importa: la remuneración",
+    "imponible que informa ANSES ya viene topeada.",
+    "Formato de período: 'AAAAMM'."
   ],
-  "bases_minimas": [],
-  "alicuotas_personales": [],
+  "bases_minimas": [
+    {
+      "desde": "199404",
+      "hasta": "199409",
+      "valor": "189",
+      "maximo": "3780",
+      "norma": "Res. S.S.S. 26",
+      "verificado": false
+    },
+    {
+      "desde": "199410",
+      "hasta": "199503",
+      "valor": "189",
+      "maximo": "3780",
+      "norma": "Res. S.S.S. 171",
+      "verificado": false
+    },
+    {
+      "desde": "199504",
+      "hasta": "199509",
+      "valor": "216",
+      "maximo": "4320",
+      "norma": "Res. S.S.S. 126",
+      "verificado": false
+    },
+    {
+      "desde": "199510",
+      "hasta": "199603",
+      "valor": "225",
+      "maximo": "4500",
+      "norma": "Res. S.S.S. 41",
+      "verificado": false
+    },
+    {
+      "desde": "199604",
+      "hasta": "199609",
+      "valor": "228",
+      "maximo": "4560",
+      "norma": "Res. S.S.S. 28",
+      "verificado": false
+    },
+    {
+      "desde": "199610",
+      "hasta": "199703",
+      "valor": "228",
+      "maximo": "4560",
+      "norma": "Res. S.S.S. 85",
+      "verificado": false
+    },
+    {
+      "desde": "199704",
+      "hasta": "199709",
+      "valor": "240",
+      "maximo": "4800",
+      "norma": "Res. S.S.S. 27",
+      "verificado": false
+    },
+    {
+      "desde": "199710",
+      "hasta": "199712",
+      "valor": "240",
+      "maximo": "4800",
+      "norma": "Res. Conj. M.E. y O. y S.P. 1.114 y M.T. y S.S. 661",
+      "verificado": false
+    },
+    {
+      "desde": "199801",
+      "hasta": "199812",
+      "valor": "240",
+      "maximo": "4800",
+      "norma": "Res. Conj. M.T. y S.S. 54 y M.E. y O. y S.P. 124",
+      "verificado": false
+    },
+    {
+      "desde": "199901",
+      "hasta": "199912",
+      "valor": "240",
+      "maximo": "4800",
+      "norma": "Res. Conj. M.T. y S.S. 99 y M.E. y O. y S.P. 330",
+      "verificado": false
+    },
+    {
+      "desde": "200001",
+      "hasta": "200703",
+      "valor": "240",
+      "maximo": "4800",
+      "norma": "Res. Conj. M.T.E. y F.R.H. 292/00 y M.E. 531/00",
+      "verificado": false
+    },
+    {
+      "desde": "200704",
+      "hasta": "200708",
+      "valor": "240",
+      "maximo": "6000",
+      "norma": "Dto. 313/07 y Ley 26.222",
+      "verificado": false
+    },
+    {
+      "desde": "200709",
+      "hasta": "200802",
+      "valor": "240",
+      "maximo": "6750",
+      "norma": "Dto. 1.346/07",
+      "verificado": false
+    },
+    {
+      "desde": "200803",
+      "hasta": "200806",
+      "valor": "240",
+      "maximo": "7256",
+      "norma": "Dto. 279/08",
+      "verificado": false
+    },
+    {
+      "desde": "200807",
+      "hasta": "200902",
+      "valor": "240",
+      "maximo": "7800",
+      "norma": "Dto. 279/08",
+      "verificado": false
+    },
+    {
+      "desde": "200903",
+      "hasta": "200908",
+      "valor": "268.06",
+      "maximo": "8711.82",
+      "norma": "Res. ANSES 135/09",
+      "verificado": false
+    },
+    {
+      "desde": "200909",
+      "hasta": "201002",
+      "valor": "287.74",
+      "maximo": "9351.30",
+      "norma": "Res. ANSES 65/09",
+      "verificado": false
+    },
+    {
+      "desde": "201003",
+      "hasta": "201008",
+      "valor": "311.36",
+      "maximo": "10119.08",
+      "norma": "Res. ANSES 130/10",
+      "verificado": false
+    },
+    {
+      "desde": "201009",
+      "hasta": "201102",
+      "valor": "363.98",
+      "maximo": "11829.21",
+      "norma": "Res. ANSES 651/10",
+      "verificado": false
+    },
+    {
+      "desde": "201103",
+      "hasta": "201108",
+      "valor": "427.06",
+      "maximo": "13879.25",
+      "norma": "Res. ANSES 58/11",
+      "verificado": false
+    },
+    {
+      "desde": "201109",
+      "hasta": "201202",
+      "valor": "498.89",
+      "maximo": "16213.72",
+      "norma": "Res. ANSES 448/11",
+      "verificado": false
+    },
+    {
+      "desde": "201203",
+      "hasta": "201208",
+      "valor": "586.79",
+      "maximo": "19070.55",
+      "norma": "Res. ANSES 47/12",
+      "verificado": false
+    },
+    {
+      "desde": "201209",
+      "hasta": "201302",
+      "valor": "653.81",
+      "maximo": "21248.45",
+      "norma": "Res. ANSES 327/12",
+      "verificado": false
+    },
+    {
+      "desde": "201303",
+      "hasta": "201308",
+      "valor": "753.05",
+      "maximo": "24473.92",
+      "norma": "Res. ANSES 30/13",
+      "verificado": false
+    },
+    {
+      "desde": "201309",
+      "hasta": "201402",
+      "valor": "861.57",
+      "maximo": "28000.65",
+      "norma": "Res. ANSES 266/13",
+      "verificado": false
+    },
+    {
+      "desde": "201403",
+      "hasta": "201408",
+      "valor": "959.01",
+      "maximo": "31167.56",
+      "norma": "Res. ANSES 27/14",
+      "verificado": false
+    },
+    {
+      "desde": "201409",
+      "hasta": "201502",
+      "valor": "1124.06",
+      "maximo": "36531.48",
+      "norma": "Res. ANSES 449/14",
+      "verificado": false
+    },
+    {
+      "desde": "201503",
+      "hasta": "201508",
+      "valor": "1329.31",
+      "maximo": "43202.17",
+      "norma": "Res. ANSES 44/15",
+      "verificado": false
+    },
+    {
+      "desde": "201509",
+      "hasta": "201602",
+      "valor": "1495.34",
+      "maximo": "48598.08",
+      "norma": "Res. ANSES 396/15",
+      "verificado": false
+    },
+    {
+      "desde": "201603",
+      "hasta": "201608",
+      "valor": "1724.88",
+      "maximo": "56057.93",
+      "norma": "Res. ANSES 28/16",
+      "verificado": false
+    },
+    {
+      "desde": "201609",
+      "hasta": "201702",
+      "valor": "1969.12",
+      "maximo": "63995.73",
+      "norma": "Res. ANSES 298/16",
+      "verificado": false
+    },
+    {
+      "desde": "201703",
+      "hasta": "201708",
+      "valor": "2224.32",
+      "maximo": "72289.62",
+      "norma": "Res. ANSES 34-E/2017",
+      "verificado": false
+    },
+    {
+      "desde": "201709",
+      "hasta": "201802",
+      "valor": "2520.60",
+      "maximo": "81918.55",
+      "norma": "Res. ANSES 176-E/2017",
+      "verificado": false
+    },
+    {
+      "desde": "201803",
+      "hasta": "201805",
+      "valor": "2664.52",
+      "maximo": "86596.10",
+      "norma": "Res. ANSES 28/2018",
+      "verificado": false
+    },
+    {
+      "desde": "201806",
+      "hasta": "201808",
+      "valor": "2816.14",
+      "maximo": "91523.41",
+      "norma": "Res. ANSES 88/2018",
+      "verificado": false
+    },
+    {
+      "desde": "201809",
+      "hasta": "201811",
+      "valor": "3004.25",
+      "maximo": "97637.14",
+      "norma": "Res. ANSES 128/2018",
+      "verificado": false
+    },
+    {
+      "desde": "201812",
+      "hasta": "201902",
+      "valor": "3237.98",
+      "maximo": "105233.32",
+      "norma": "Res. ANSES 242/2018",
+      "verificado": false
+    },
+    {
+      "desde": "201903",
+      "hasta": "201905",
+      "valor": "3621.04",
+      "maximo": "117682.47",
+      "norma": "Res. ANSES 74/2019",
+      "verificado": false
+    },
+    {
+      "desde": "201906",
+      "hasta": "201908",
+      "valor": "4009.94",
+      "maximo": "130321.52",
+      "norma": "Res. ANSES 139/2019",
+      "verificado": false
+    },
+    {
+      "desde": "201909",
+      "hasta": "201911",
+      "valor": "4499.95",
+      "maximo": "146246.86",
+      "norma": "Res. ANSES 200/2019",
+      "verificado": false
+    },
+    {
+      "desde": "201912",
+      "hasta": "202002",
+      "valor": "4893.25",
+      "maximo": "159028.80",
+      "norma": "Res. ANSES 279/2019",
+      "verificado": false
+    },
+    {
+      "desde": "202003",
+      "hasta": "202005",
+      "valor": "5352.24",
+      "maximo": "173945.70",
+      "norma": "Res. ANSES 76/2020",
+      "verificado": false
+    },
+    {
+      "desde": "202006",
+      "hasta": "202008",
+      "valor": "5679.80",
+      "maximo": "184591.18",
+      "norma": "Res. ANSES 167/2020",
+      "verificado": false
+    },
+    {
+      "desde": "202009",
+      "hasta": "202011",
+      "valor": "6105.79",
+      "maximo": "198435.52",
+      "norma": "Res. ANSES 325/2020",
+      "verificado": false
+    },
+    {
+      "desde": "202012",
+      "hasta": "202102",
+      "valor": "6411.08",
+      "maximo": "208357.30",
+      "norma": "Res. ANSES 433/2020",
+      "verificado": false
+    },
+    {
+      "desde": "202103",
+      "hasta": "202105",
+      "valor": "6928.46",
+      "maximo": "225171.69",
+      "norma": "Res. ANSES 52/2021",
+      "verificado": false
+    },
+    {
+      "desde": "202106",
+      "hasta": "202108",
+      "valor": "7768.19",
+      "maximo": "252462.50",
+      "norma": "Res. ANSES 108/2021",
+      "verificado": false
+    },
+    {
+      "desde": "202109",
+      "hasta": "202111",
+      "valor": "8730.67",
+      "maximo": "283742.60",
+      "norma": "Res. ANSES 178/2021",
+      "verificado": false
+    },
+    {
+      "desde": "202112",
+      "hasta": "202202",
+      "valor": "9787.95",
+      "maximo": "318103.83",
+      "norma": "Res. ANSES 243/2021",
+      "verificado": false
+    },
+    {
+      "desde": "202203",
+      "hasta": "202205",
+      "valor": "10989.91",
+      "maximo": "357166.98",
+      "norma": "Res. ANSES 26/2022",
+      "verificado": false
+    },
+    {
+      "desde": "202206",
+      "hasta": "202208",
+      "valor": "12638.40",
+      "maximo": "410742.03",
+      "norma": "Res. ANSES 133/2022",
+      "verificado": false
+    },
+    {
+      "desde": "202209",
+      "hasta": "202211",
+      "valor": "14601.14",
+      "maximo": "474530.27",
+      "norma": "Res. ANSES 180/2022",
+      "verificado": false
+    },
+    {
+      "desde": "202212",
+      "hasta": "202302",
+      "valor": "16881.84",
+      "maximo": "548651.90",
+      "norma": "Res. ANSES 260/2022",
+      "verificado": false
+    },
+    {
+      "desde": "202303",
+      "hasta": "202305",
+      "valor": "19758.51",
+      "maximo": "642142.18",
+      "norma": "Res. ANSES 36/2023",
+      "verificado": false
+    },
+    {
+      "desde": "202306",
+      "hasta": "202308",
+      "valor": "23891.99",
+      "maximo": "776478.32",
+      "norma": "Res. ANSES 112/2023",
+      "verificado": false
+    },
+    {
+      "desde": "202309",
+      "hasta": "202311",
+      "valor": "29456.43",
+      "maximo": "957320.12",
+      "norma": "Res. ANSES 189/2023",
+      "verificado": false
+    },
+    {
+      "desde": "202312",
+      "hasta": "202402",
+      "valor": "35603.99",
+      "maximo": "1157112.83",
+      "norma": "Res. ANSES 220/2023",
+      "verificado": false
+    },
+    {
+      "desde": "202403",
+      "hasta": "202403",
+      "valor": "45281.15",
+      "maximo": "1471616.10",
+      "norma": "Res. ANSES 39/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202404",
+      "hasta": "202404",
+      "valor": "57688.19",
+      "maximo": "1874838.91",
+      "norma": "Res. ANSES 62/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202405",
+      "hasta": "202405",
+      "valor": "64039.66",
+      "maximo": "2081258.67",
+      "norma": "Res. ANSES 97/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202406",
+      "hasta": "202406",
+      "valor": "69694.36",
+      "maximo": "2265033.81",
+      "norma": "Res. ANSES 188/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202407",
+      "hasta": "202407",
+      "valor": "72607.58",
+      "maximo": "2359712.22",
+      "norma": "Res. ANSES 320/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202408",
+      "hasta": "202408",
+      "valor": "75933.01",
+      "maximo": "2467787.04",
+      "norma": "Res. ANSES 390/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202409",
+      "hasta": "202409",
+      "valor": "78993.11",
+      "maximo": "2567238.86",
+      "norma": "Res. ANSES 588/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202410",
+      "hasta": "202410",
+      "valor": "82287.12",
+      "maximo": "2674292.72",
+      "norma": "Res. ANSES 798/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202411",
+      "hasta": "202411",
+      "valor": "85142.48",
+      "maximo": "2767090.68",
+      "norma": "Res. ANSES 979/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202412",
+      "hasta": "202412",
+      "valor": "87432.81",
+      "maximo": "2841525.42",
+      "norma": "Res. ANSES 1122/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202501",
+      "hasta": "202501",
+      "valor": "89557.43",
+      "maximo": "2910574.49",
+      "norma": "Res ANSES 1247/2024",
+      "verificado": false
+    },
+    {
+      "desde": "202502",
+      "hasta": "202502",
+      "valor": "91975.48",
+      "maximo": "2989160.00",
+      "norma": "Res ANSES 66/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202503",
+      "hasta": "202503",
+      "valor": "94008.14",
+      "maximo": "3055220.44",
+      "norma": "Res ANSES 145/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202504",
+      "hasta": "202504",
+      "valor": "96264.34",
+      "maximo": "3128545.73",
+      "norma": "Res ANSES 179/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202505",
+      "hasta": "202505",
+      "valor": "99855.00",
+      "maximo": "3245240.49",
+      "norma": "Res ANSES 211/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202506",
+      "hasta": "202506",
+      "valor": "102630.97",
+      "maximo": "3335458.18",
+      "norma": "Res ANSES 237/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202507",
+      "hasta": "202507",
+      "valor": "104170.43",
+      "maximo": "3385490.05",
+      "norma": "Res ANSES 251/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202508",
+      "hasta": "202508",
+      "valor": "105857.99",
+      "maximo": "3440334.99",
+      "norma": "Res ANSES 278/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202509",
+      "hasta": "202509",
+      "valor": "107869.29",
+      "maximo": "3505701.35",
+      "norma": "Res ANSES 298/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202510",
+      "hasta": "202510",
+      "valor": "109897.23",
+      "maximo": "3571608.54",
+      "norma": "Res ANSES 317/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202511",
+      "hasta": "202511",
+      "valor": "112183.09",
+      "maximo": "3645898.00",
+      "norma": "Res ANSES 338/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202512",
+      "hasta": "202512",
+      "valor": "114808.17",
+      "maximo": "3731212.01",
+      "norma": "Res ANSES 359/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202601",
+      "hasta": "202601",
+      "valor": "117643.93",
+      "maximo": "3823372.95",
+      "norma": "Res ANSES 381/2025",
+      "verificado": false
+    },
+    {
+      "desde": "202602",
+      "hasta": "202602",
+      "valor": "120996.78",
+      "maximo": "3932339.08",
+      "norma": "Res ANSES 21/2026",
+      "verificado": false
+    },
+    {
+      "desde": "202603",
+      "hasta": "202603",
+      "valor": "124481.49",
+      "maximo": "4045590.45",
+      "norma": "Res ANSES 38/2026",
+      "verificado": false
+    }
+  ],
+  "alicuotas_personales": [
+    {
+      "desde": "199407",
+      "hasta": null,
+      "sipa": "0.11",
+      "inssjp": "0.03",
+      "norma": "Ley 24.241 art. 11 (SIPA) y Ley 19.032 (INSSJP) — VERIFICAR",
+      "verificado": false
+    }
+  ],
   "tolerancias": {
     "porcentaje_aporte": "0.02",
     "porcentaje_base_minima": "0.01",
