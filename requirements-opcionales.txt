@@ -1,0 +1,7 @@
+# Dependencias opcionales. El análisis de planillas CSV y todo el motor de
+# controles funcionan solo con la biblioteca estándar de Python.
+
+cryptography>=42     # bóveda cifrada de credenciales (comando 'boveda')
+playwright>=1.40     # acceso automatizado a Mi ANSES (comando 'anses')
+pdfplumber>=0.11     # lectura de historia laboral en PDF
+openpyxl>=3.1        # lectura de planillas .xlsx

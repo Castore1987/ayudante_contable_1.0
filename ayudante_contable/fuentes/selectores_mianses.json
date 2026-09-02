@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "_lea_esto": [
+    "Estos selectores NO están verificados contra el portal de ANSES: el HTML de",
+    "Mi ANSES cambia sin aviso y sin API pública. Son un punto de partida para que",
+    "el estudio los ajuste con el inspector del navegador la primera vez, y los",
+    "corrija cuando el portal cambie.",
+    "",
+    "Cómo ajustarlos: corré 'ayudante-contable anses --cuil ... --inspeccionar'.",
+    "Abre el navegador visible y se detiene en cada paso mostrando si encontró el",
+    "elemento, así vas copiando los selectores reales acá.",
+    "",
+    "Se admite cualquier selector de Playwright: CSS, 'text=...', 'role=...',",
+    "'xpath=...'. Se prueban en orden y gana el primero que aparezca."
+  ],
+  "url_login": "https://servicioscorp.anses.gob.ar/clavelogon/logon.aspx",
+  "url_historia_laboral": "https://servicioscorp.anses.gob.ar/mianses/",
+  "espera_ms": 20000,
+  "pasos": {
+    "campo_cuil": [
+      "#cuil",
+      "input[name='cuil']",
+      "input[placeholder*='CUIL' i]",
+      "input[type='text']"
+    ],
+    "campo_clave": [
+      "#password",
+      "input[name='clave']",
+      "input[type='password']"
+    ],
+    "boton_ingresar": [
+      "#btnIngresar",
+      "button[type='submit']",
+      "input[type='submit']",
+      "text=Ingresar"
+    ],
+    "indicador_sesion_iniciada": [
+      "text=Mi ANSES",
+      "text=Cerrar sesión",
+      "#menuPrincipal"
+    ],
+    "indicador_credencial_invalida": [
+      "text=usuario o clave incorrect",
+      "text=Clave incorrecta",
+      ".alert-danger"
+    ],
+    "indicador_captcha": [
+      "iframe[src*='recaptcha']",
+      "iframe[title*='captcha' i]",
+      "text=No soy un robot"
+    ],
+    "indicador_segundo_factor": [
+      "text=código de verificación",
+      "text=Ingresá el código",
+      "input[name*='codigo' i]"
+    ],
+    "enlace_historia_laboral": [
+      "text=Historia laboral",
+      "a[href*='historialaboral' i]",
+      "text=Consultar historia laboral"
+    ],
+    "boton_descargar": [
+      "text=Descargar",
+      "a[href$='.pdf']",
+      "button:has-text('Exportar')"
+    ]
+  }
+}

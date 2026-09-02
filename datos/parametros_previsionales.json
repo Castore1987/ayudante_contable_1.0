@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "_lea_esto": [
+    "Este archivo se entrega VACÍO a propósito.",
+    "El ayudante contable no inventa cifras legales: la base imponible mínima y",
+    "las alícuotas las carga el estudio desde la fuente oficial y quedan auditadas",
+    "acá, con la norma que las respalda.",
+    "",
+    "Dónde conseguir los valores:",
+    "  - Base imponible mínima (art. 9 Ley 24.241): resoluciones de movilidad de",
+    "    ANSES y tabla de topes y bases imponibles publicada por ARCA/AFIP.",
+    "  - Alícuotas de aporte personal: Ley 24.241 art. 11 y Ley 19.032 (INSSJP).",
+    "",
+    "Mientras un período no tenga base cargada, el validador lo informa como",
+    "SIN_PARAMETRO_BASE_MINIMA y NO emite juicio sobre ese mes.",
+    "",
+    "Formato de período: 'AAAAMM' (ej. '202401') o 'MM/AAAA'.",
+    "'hasta': null solo se admite en el último tramo (tramo abierto vigente).",
+    "Marcá 'verificado': true únicamente cuando alguien del estudio cotejó el",
+    "valor contra la norma citada."
+  ],
+  "bases_minimas": [],
+  "alicuotas_personales": [],
+  "tolerancias": {
+    "porcentaje_aporte": "0.02",
+    "porcentaje_base_minima": "0.01",
+    "meses_interrupcion_tolerada": 0,
+    "meses_laguna_informable": 1
+  }
+}

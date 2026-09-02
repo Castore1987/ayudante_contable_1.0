@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ayudante-contable"
+version = "1.0.0"
+description = "Ayudante contable previsional: control de historia laboral de ANSES y armado de la línea de servicios."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["anses", "contable", "previsional", "historia laboral", "jubilacion"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Natural Language :: Spanish",
+  "Topic :: Office/Business :: Financial :: Accounting",
+]
+dependencies = []
+
+[project.optional-dependencies]
+# Bóveda cifrada de credenciales.
+boveda = ["cryptography>=42"]
+# Acceso automatizado al portal Mi ANSES.
+portal = ["playwright>=1.40"]
+# Lectura de historias laborales en PDF y planillas .xlsx.
+archivos = ["pdfplumber>=0.11", "openpyxl>=3.1"]
+todo = [
+  "cryptography>=42",
+  "playwright>=1.40",
+  "pdfplumber>=0.11",
+  "openpyxl>=3.1",
+]
+
+[project.scripts]
+ayudante-contable = "ayudante_contable.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ayudante_contable*"]
+
+[tool.setuptools.package-data]
+ayudante_contable = ["fuentes/*.json"]

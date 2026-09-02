@@ -1,0 +1,92 @@
+# Procedimiento operativo del estudio
+
+Guía corta para el trabajo diario. La referencia completa está en el README.
+
+## Una sola vez, al instalar
+
+1. **Cargar la tabla de parámetros.**
+
+   ```bash
+   ayudante-contable parametros plantilla
+   ```
+
+   Abrí el archivo generado y cargá las bases imponibles mínimas de los períodos
+   que vas a analizar, con la norma que respalda cada tramo. Marcá
+   `"verificado": true` recién cuando alguien lo cotejó contra la fuente
+   oficial.
+
+   ```bash
+   ayudante-contable parametros verificar   # debe salir sin advertencias
+   ```
+
+2. **Si vas a usar el acceso al portal**, ajustá los selectores:
+
+   ```bash
+   ayudante-contable anses --cuil <CUIL> --inspeccionar
+   ```
+
+   Abrí Mi ANSES en el navegador, inspeccioná cada campo y corregí
+   `ayudante_contable/fuentes/selectores_mianses.json`. Es un archivo de
+   configuración: no hace falta tocar código.
+
+3. **Definí dónde vive la carpeta de trabajo** (guarda bóveda, auditoría,
+   descargas e informes con datos de clientes):
+
+   ```bash
+   export AYUDANTE_DIR=/ruta/protegida/ayudante
+   export AYUDANTE_OPERADOR="Nombre del operador"
+   ```
+
+   Incluila en el resguardo del estudio y en la política de retención.
+
+## Por cada cliente
+
+1. **Dejá asentada la autorización** del cliente para consultar su cuenta.
+2. Obtené la historia laboral, por el camino que corresponda:
+
+   ```bash
+   # Archivo ya descargado (recomendado)
+   ayudante-contable analizar --cuil <CUIL> --nombre "APELLIDO, Nombre" \
+     --planilla historia.csv --todo
+
+   # Portal, con vos presente para el CAPTCHA / código
+   ayudante-contable anses --cuil <CUIL> --nombre "APELLIDO, Nombre" --todo
+   ```
+
+3. **Leé los hallazgos de nivel ERROR primero.** Son los que hay que reclamar
+   antes de presentar cualquier trámite.
+4. **Cotejá contra documentación respaldatoria** los meses marcados: recibos de
+   sueldo, F.931, constancias de pago.
+5. Archivá en el legajo del cliente: el archivo original de la historia laboral,
+   el `-informe.html` y el `-linea-servicios.csv`.
+
+## Cómo leer el resultado
+
+- **Meses computables** — antigüedad reconocida por la herramienta.
+- **Meses con reservas** — se computaron, pero el ingreso fue parcial o no hay
+  dato. Pedí la constancia de pago antes de darlos por buenos.
+- **Meses descartados** — declarados y sin ingresar. No suman antigüedad y son
+  el reclamo más frecuente al empleador.
+- **Lagunas** — huecos entre el primer y el último aporte. Pueden ser períodos
+  sin actividad (normal) o períodos no declarados (a investigar).
+
+## Cuando algo se rompe
+
+| Síntoma | Qué hacer |
+|---|---|
+| `SIN_PARAMETRO_BASE_MINIMA` | Falta cargar la base mínima de esos períodos. |
+| `PARAMETROS_NO_VERIFICADOS` | Alguien tiene que cotejar esos tramos contra la norma. |
+| El portal no encuentra un campo | Ajustá el selector que menciona el error; hay una captura de pantalla guardada en la carpeta de descargas. |
+| El PDF no se lee | Probá exportar la historia laboral a CSV. Si es un escaneo, necesita OCR previo. |
+| Salida con código 2 | El comando no corrió: leé el mensaje de error, es específico. |
+
+## Higiene de datos
+
+- Las claves se piden en el momento y se descartan; guardarlas en la bóveda es
+  opcional y una decisión del estudio.
+- `auditoria.jsonl` registra cada acceso con el CUIL enmascarado. No lo borres:
+  es el respaldo de qué se consultó y cuándo.
+- Las capturas de pantalla del portal contienen datos personales del cliente.
+  Quedan en la carpeta de descargas, junto al resto del expediente.
+- Nada de esto va al repositorio: el `.gitignore` ya excluye bóveda, auditoría,
+  descargas e informes.

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "_lea_esto": [
+    "ARCHIVO DE DEMOSTRACIÓN. Los importes son inventados y redondos a propósito",
+    "para que nadie los confunda con valores oficiales. Sirve para probar el flujo",
+    "completo con ejemplos/historia_laboral_ejemplo.csv, no para trabajar con",
+    "clientes reales."
+  ],
+  "bases_minimas": [
+    {
+      "desde": "202201",
+      "hasta": "202212",
+      "valor": "10000.00",
+      "norma": "EJEMPLO — VALOR FICTICIO, NO USAR EN PRODUCCIÓN",
+      "verificado": false
+    },
+    {
+      "desde": "202301",
+      "hasta": "202312",
+      "valor": "20000.00",
+      "norma": "EJEMPLO — VALOR FICTICIO, NO USAR EN PRODUCCIÓN",
+      "verificado": false
+    },
+    {
+      "desde": "202401",
+      "hasta": null,
+      "valor": "50000.00",
+      "norma": "EJEMPLO — VALOR FICTICIO, NO USAR EN PRODUCCIÓN",
+      "verificado": false
+    }
+  ],
+  "alicuotas_personales": [
+    {
+      "desde": "202201",
+      "hasta": null,
+      "sipa": "0.11",
+      "inssjp": "0.03",
+      "norma": "EJEMPLO — cotejar contra Ley 24.241 art. 11 y Ley 19.032",
+      "verificado": false
+    }
+  ],
+  "tolerancias": {
+    "porcentaje_aporte": "0.02",
+    "porcentaje_base_minima": "0.01",
+    "meses_interrupcion_tolerada": 0,
+    "meses_laguna_informable": 1
+  }
+}
