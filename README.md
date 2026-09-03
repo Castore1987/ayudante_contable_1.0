@@ -21,6 +21,7 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 | `SIN_PARAMETRO_BASE_MINIMA` | Períodos sin base mínima cargada: **no se emitió juicio** | advertencia |
 | `PARAMETROS_NO_VERIFICADOS` | Se usaron valores que nadie cotejó contra la norma | advertencia |
 | `MAS_QUE_ANSES` | Meses que el sistema computa y el resumen de ANSES no reconoce | advertencia |
+| `ALICUOTA_NO_VERIFICADA` | Alícuotas sin auditar: el control de coherencia no corrió | advertencia |
 | `MENOS_QUE_ANSES` | Meses que ANSES reconoce y el sistema no computó (posible error de lectura) | advertencia |
 | `LAGUNA_PREVISIONAL` | Meses sin servicios computables entre el primer y el último aporte | información |
 | `EMPLEOS_SIMULTANEOS` | Meses con más de un empleador (se computan una sola vez) | información |
@@ -29,6 +30,47 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 Y produce la **línea de servicios**: cada relación laboral con su CUIT, régimen,
 fecha de inicio, fecha de fin, meses declarados y observaciones; más el
 consolidado de antigüedad sin duplicar meses de empleo simultáneo.
+
+---
+
+## Las tres fuentes
+
+Ninguna alcanza sola, y cada una es buena en algo distinto:
+
+| Fuente | Aporta | No aporta |
+|---|---|---|
+| **HLAB** de ANSES (PDF) | Remuneración **imponible**, ya topeada, mes a mes | Si el aporte ingresó |
+| **ARCA «Aportes en Línea»** (.xls, en realidad HTML) | `Declarado` vs `Depositado` en relación de dependencia | La imponible (informa la bruta) |
+| **SICAM** (Situación de Revista + Detalle de Deuda) | Deuda y prescripción de autónomos y monotributo | Nada de relación de dependencia |
+
+Se combinan en un solo informe:
+
+```bash
+ayudante-contable analizar --cuil 23-14366086-9 \
+  --hlab HLAB_23143660869.pdf \
+  --arca Historico23143660869.xls \
+  --sicam-revista revista.pdf --sicam-deuda deuda.pdf \
+  --todo
+```
+
+**Precedencia**: el pago efectivo manda sobre la declaración, y la remuneración
+imponible se toma de quien la informa como imponible. Cuando dos fuentes se
+contradicen la diferencia no se resuelve en silencio: sale listada como
+discrepancia. La diferencia entre la imponible del HLAB y la bruta de ARCA **no**
+cuenta como contradicción: son conceptos distintos.
+
+### Reglas de autónomos
+
+Dos criterios del estudio, aplicados de forma explícita y configurable:
+
+| Situación en SICAM | Tratamiento | Cómo cambiarlo |
+|---|---|---|
+| Período con deuda | **Regularizado** (plan de pagos o moratoria): el mes computa, señalado | `--sicam-deuda-sin-regularizar` lo trata como no ingresado |
+| `Art. 1 Ley 25.321` en `Benef. Aplic.` | **Prescripto**: no se contabiliza ni se reclama | `--sin-prescripcion-art1` lo computa igual |
+
+El detalle de deuda **no dice** si algo está en plan de pagos: ese dato lo aporta
+el estudio. Por eso es una política declarada, que queda asentada en cada
+informe, y no una deducción del archivo.
 
 ---
 
@@ -191,8 +233,15 @@ estándar**. Lo demás es opcional:
 ```bash
 pip install -e ".[boveda]"    # bóveda cifrada de credenciales
 pip install -e ".[archivos]"  # PDF y planillas .xlsx
+pip install -e ".[sicam]"     # lectura de los PDF de SICAM
 pip install -e ".[portal]"    # acceso automatizado a Mi ANSES
 playwright install chromium   # solo si vas a usar el portal
+```
+
+Los PDF de SICAM necesitan además OCR del sistema:
+
+```bash
+apt-get install -y tesseract-ocr tesseract-ocr-spa
 ```
 
 ---
@@ -314,8 +363,10 @@ Decisiones que toma la herramienta y conviene conocer antes de firmar un informe
 python -m unittest discover -s tests -t .
 ```
 
-196 pruebas, sin dependencias externas más allá de `cryptography` para las de la
-bóveda. Incluyen un HLAB sintético (`tests/hlab_ejemplo.txt`) que reproduce el
+244 pruebas, sin dependencias externas más allá de `cryptography` para las de la
+bóveda. Las de SICAM no ejercitan el OCR: prueban la limpieza de celdas, la
+detección del Art. 1 Ley 25.321 y el cruce alta/deuda con lecturas armadas a
+mano. Incluyen un HLAB sintético (`tests/hlab_ejemplo.txt`) que reproduce el
 formato real —secciones, columnas pegadas, renglones vacíos— con datos
 inventados: ninguna historia laboral de un cliente entra al repositorio.
 
@@ -328,7 +379,10 @@ ayudante_contable/
   analisis/evaluacion.py   Juicio mes a mes (mínimo, coherencia, ingreso)
   analisis/linea_servicios.py  Tramos, consolidado y lagunas
   analisis/validador.py    Controles y agrupamiento de hallazgos
+  analisis/consolidacion.py  Fusión de varias fuentes, con precedencia y conflictos
   fuentes/hlab_anses.py    Lector del HLAB de ANSES, sección por sección
+  fuentes/arca_aportes.py  Export «Aportes en Línea»: declarado vs depositado
+  fuentes/sicam.py         Revista y deuda de SICAM por OCR guiado por la grilla
   fuentes/planilla.py      Importación CSV/TSV/XLSX
   fuentes/pdf_anses.py     Importación PDF genérica (tablas y texto)
   lote.py                  Procesamiento por lote, aislando cada expediente
@@ -354,6 +408,15 @@ ayudante_contable/
   formato, hay que ajustar las expresiones de `fuentes/hlab_anses.py`; el
   sistema avisa cuando no reconoce renglones en vez de devolver un informe
   incompleto en silencio.
+- **Los PDF de SICAM no tienen capa de texto**: el texto viene convertido a
+  contornos vectoriales, así que se leen por OCR. Sobre el documento de prueba
+  el reconocimiento fue del orden del 76 % de los renglones del detalle de
+  deuda, con algunos importes mal leídos. El lector se autocontrola —informa el
+  porcentaje reconocido por página y marca como dudoso todo renglón donde
+  capital + intereses no cierra con el total— pero **para un informe que se
+  firma conviene guardar las pantallas de SICAM como HTML** y leer los valores
+  exactos, igual que el export de ARCA. La situación de revista, en cambio, se
+  reconoce completa.
 - La herramienta controla consistencia sobre los datos que entrega la fuente. Si
   ANSES tiene mal un dato de origen, esto no lo puede saber.
 

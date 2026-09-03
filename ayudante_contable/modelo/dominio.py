@@ -165,6 +165,11 @@ class EstadoIngreso(str, Enum):
     INGRESADO = "ingresado"
     NO_INGRESADO = "no_ingresado"
     PARCIAL = "parcial"
+    # Deuda incluida en un plan de pagos o una moratoria: el mes computa.
+    REGULARIZADO = "regularizado"
+    # Alcanzado por el Art. 1 Ley 25.321: el período está prescripto y NO se
+    # contabiliza. No es deuda a reclamar ni un aporte a acreditar.
+    PRESCRIPTO = "prescripto"
     DESCONOCIDO = "desconocido"
 
     @classmethod
@@ -178,6 +183,10 @@ class EstadoIngreso(str, Enum):
             return cls.NO_INGRESADO
         if clave in {"parcial", "parcialmente", "pago parcial"}:
             return cls.PARCIAL
+        if clave in {"regularizado", "plan de pagos", "moratoria", "plan"}:
+            return cls.REGULARIZADO
+        if clave in {"prescripto", "prescripta", "prescripcion"}:
+            return cls.PRESCRIPTO
         return cls.DESCONOCIDO
 
 

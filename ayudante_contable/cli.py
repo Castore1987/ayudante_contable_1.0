@@ -84,17 +84,76 @@ def _leer_pdf(ruta: Path, cuil: str, nombre: str | None, forzar_generico: bool):
     return leer_pdf_historia_laboral(ruta, cuil, nombre)
 
 
-def comando_analizar(args) -> int:
+def _reunir_fuentes(args, cuil: str) -> list:
+    """Lee todas las fuentes indicadas en la línea de comandos."""
+    from .fuentes.arca_aportes import leer_aportes_arca
     from .fuentes.planilla import leer_planilla
+    from .fuentes.sicam import PoliticaDeuda, leer_sicam
+
+    historias = []
+
+    if args.planilla:
+        historias.append(leer_planilla(args.planilla, cuil, args.nombre))
+    if args.pdf:
+        historias.append(_leer_pdf(args.pdf, cuil, args.nombre, args.pdf_generico))
+    if args.hlab:
+        from .fuentes.hlab_anses import leer_hlab
+
+        historias.append(leer_hlab(args.hlab, cuil, args.nombre))
+    if args.arca:
+        historias.append(leer_aportes_arca(args.arca, cuil, args.nombre))
+    if args.sicam_revista:
+        politica = PoliticaDeuda(
+            deuda_es_regularizada=not args.sicam_deuda_sin_regularizar,
+            aplicar_prescripcion_art1=not args.sin_prescripcion_art1,
+        )
+        historias.append(
+            leer_sicam(
+                args.sicam_revista,
+                args.sicam_deuda,
+                cuil,
+                args.nombre,
+                politica,
+            )
+        )
+    elif args.sicam_deuda:
+        raise ErrorFuente(
+            "--sicam-deuda necesita también --sicam-revista: el detalle de deuda "
+            "solo se interpreta contra los períodos de actividad."
+        )
+
+    if not historias:
+        raise ErrorFuente(
+            "No indicaste ninguna fuente. Usá --hlab, --arca, --sicam-revista, "
+            "--planilla o --pdf (se pueden combinar)."
+        )
+    return historias
+
+
+def comando_analizar(args) -> int:
+    from .analisis.consolidacion import consolidar
 
     config = Configuracion.cargar(args.dir).preparar()
     cuil = normalizar_cuil(args.cuil)
     parametros = _cargar_parametros(args.parametros, config)
 
-    if args.planilla:
-        historia = leer_planilla(args.planilla, cuil, args.nombre)
+    historias = _reunir_fuentes(args, cuil)
+
+    if len(historias) == 1:
+        historia = historias[0]
+        conflictos = []
     else:
-        historia = _leer_pdf(args.pdf, cuil, args.nombre, args.pdf_generico)
+        resultado = consolidar(historias, args.nombre)
+        historia, conflictos = resultado.historia, resultado.conflictos
+        print(f"Fuentes consolidadas ({len(historias)}):")
+        for fuente in resultado.fuentes:
+            print(f"  · {fuente}")
+        if conflictos:
+            print(f"\n{len(conflictos)} discrepancia(s) entre fuentes:")
+            for conflicto in conflictos[:15]:
+                print(f"  ! {conflicto.mensaje}")
+            if len(conflictos) > 15:
+                print(f"  … y {len(conflictos) - 15} más (ver el informe exportado).")
 
     informe = analizar(historia, parametros)
 
@@ -373,9 +432,35 @@ def construir_parser() -> argparse.ArgumentParser:
         "analizar", help="Analiza una historia laboral ya descargada (CSV, XLSX o PDF)."
     )
     analizar_sub.add_argument("--cuil", required=True)
-    origen = analizar_sub.add_mutually_exclusive_group(required=True)
-    origen.add_argument("--planilla", type=Path, help="Archivo CSV/XLSX exportado de ANSES.")
-    origen.add_argument(
+    analizar_sub.add_argument(
+        "--hlab", type=Path, help="PDF de Historia Laboral de ANSES (remuneración imponible)."
+    )
+    analizar_sub.add_argument(
+        "--arca",
+        type=Path,
+        help="Export «Aportes en Línea» de ARCA: declarado vs depositado en "
+        "relación de dependencia.",
+    )
+    analizar_sub.add_argument(
+        "--sicam-revista", type=Path, help="PDF de Situación de Revista de SICAM."
+    )
+    analizar_sub.add_argument(
+        "--sicam-deuda", type=Path, help="PDF de Detalle de la Deuda de SICAM."
+    )
+    analizar_sub.add_argument(
+        "--sicam-deuda-sin-regularizar",
+        action="store_true",
+        help="Tratar la deuda de SICAM como aporte NO ingresado. Por defecto se "
+        "considera regularizada (plan de pagos o moratoria).",
+    )
+    analizar_sub.add_argument(
+        "--sin-prescripcion-art1",
+        action="store_true",
+        help="No excluir los períodos con Art. 1 Ley 25.321. Por defecto se "
+        "excluyen por prescripción.",
+    )
+    analizar_sub.add_argument("--planilla", type=Path, help="Archivo CSV/XLSX exportado de ANSES.")
+    analizar_sub.add_argument(
         "--pdf", type=Path, help="PDF de historia laboral (reconoce el HLAB de ANSES)."
     )
     analizar_sub.add_argument(

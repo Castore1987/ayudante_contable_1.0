@@ -41,6 +41,7 @@ CODIGOS = {
     "TRAMO_INTERRUMPIDO": "Tramo con meses sin declaración en el medio.",
     "MENOS_QUE_ANSES": "Meses que ANSES reconoce y el sistema no computó.",
     "MAS_QUE_ANSES": "Meses computados que ANSES no reconoce en su resumen.",
+    "ALICUOTA_NO_VERIFICADA": "Alícuotas sin verificar: no corrió el control de coherencia.",
 }
 
 
@@ -190,6 +191,20 @@ def _control_parametros(
                     periodo_fin=fin,
                 )
             )
+
+    alicuotas_sin_verificar = [a for a in parametros.alicuotas if not a.verificado]
+    if alicuotas_sin_verificar and any(e.aporte_esperado for e in evaluaciones):
+        hallazgos.append(
+            Hallazgo(
+                codigo="ALICUOTA_NO_VERIFICADA",
+                severidad=Severidad.ADVERTENCIA,
+                mensaje=(
+                    "Las alícuotas de aporte no están verificadas contra la norma: "
+                    "el control de coherencia entre aporte y remuneración no se "
+                    "ejecutó. Verificalas para activarlo."
+                ),
+            )
+        )
 
     no_verificados = parametros.bases_no_verificadas()
     if no_verificados:
