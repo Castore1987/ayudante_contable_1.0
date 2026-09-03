@@ -171,6 +171,38 @@ en discusión — y son los que hay que mirar.
 
 ---
 
+## SICAM: pedilo en planilla, no en PDF
+
+SICAM exporta la `Situación de Revista` y el `Detalle de la Deuda` en dos
+formatos, y la diferencia no es cosmética.
+
+| | PDF | Planilla (.xlsx) |
+|---|---|---|
+| Cómo se lee | OCR: el PDF trae el texto vectorizado, sin capa de texto | Lectura directa |
+| Renglones recuperados | 139 de 185 en un caso real | 185 de 185 |
+| Tiempo | ~75 s | ~0,2 s |
+| Renglones incoherentes | 11 | 0 |
+
+**Y no es solo cobertura: el OCR puede inventar servicio.** En el expediente con
+el que se calibró, un renglón mal leído generó un tramo de autónomo de 57 meses
+(05/1985–01/1990) que no existe — la revista muestra ahí un hueco real entre un
+tramo que cierra en 04/1985 y el siguiente que abre en 02/1990. La antigüedad
+salía 38 años 6 meses en vez de 33 años 9 meses.
+
+El lector de PDF sigue disponible para cuando no haya otra cosa, y avisa cuántos
+renglones reconoció por página. Pero si podés elegir, elegí la planilla.
+
+```bash
+ayudante-contable analizar --cuil 20-12345678-6 \
+  --hlab HLAB.pdf --arca AportesEnLinea.xls \
+  --sicam-revista revista.xlsx --sicam-deuda deuda.xlsx --todo
+```
+
+Las mismas banderas aceptan `.pdf` o `.xlsx`: el formato se detecta por la
+extensión.
+
+---
+
 ## Antes de analizar: cargá los parámetros
 
 El repositorio trae la tabla oficial de bases imponibles cargada:
@@ -232,7 +264,7 @@ estándar**. Lo demás es opcional:
 
 ```bash
 pip install -e ".[boveda]"    # bóveda cifrada de credenciales
-pip install -e ".[archivos]"  # PDF y planillas .xlsx
+pip install -e ".[archivos]"  # PDF, OCR de SICAM y planillas .xlsx
 pip install -e ".[sicam]"     # lectura de los PDF de SICAM
 pip install -e ".[portal]"    # acceso automatizado a Mi ANSES
 playwright install chromium   # solo si vas a usar el portal

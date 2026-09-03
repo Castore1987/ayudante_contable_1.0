@@ -47,7 +47,12 @@ Guía corta para el trabajo diario. La referencia completa está en el README.
 2. Obtené la historia laboral, por el camino que corresponda:
 
    ```bash
-   # HLAB descargado de Mi ANSES (recomendado): se reconoce solo
+   # Expediente completo: dependencia (HLAB + ARCA) y autónomos (SICAM)
+   ayudante-contable analizar --cuil <CUIL> \
+     --hlab HLAB_<CUIL>.pdf --arca AportesEnLinea.xls \
+     --sicam-revista revista.xlsx --sicam-deuda deuda.xlsx --todo
+
+   # Solo el HLAB, si es lo único que tenés
    ayudante-contable analizar --cuil <CUIL> --pdf HLAB_<CUIL>.pdf --todo
 
    # O una planilla exportada
@@ -112,6 +117,7 @@ Deja un `lote-indice.csv` para la planilla de seguimiento y un
 | `PARAMETROS_NO_VERIFICADOS` | Alguien tiene que cotejar esos tramos contra la norma. |
 | El portal no encuentra un campo | Ajustá el selector que menciona el error; hay una captura de pantalla guardada en la carpeta de descargas. |
 | El PDF no se lee | Probá exportar la historia laboral a CSV. Si es un escaneo, necesita OCR previo. |
+| SICAM avisa que reconoció pocos renglones | Estás usando el PDF. Bajá los dos reportes en **planilla (.xlsx)**: se leen completos, sin OCR y sin riesgo de inventar tramos. |
 | Salida con código 2 | El comando no corrió: leé el mensaje de error, es específico. |
 
 ## Higiene de datos

@@ -33,10 +33,11 @@ from __future__ import annotations
 
 import re
 import shutil
+from datetime import datetime
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Sequence
 
@@ -47,6 +48,9 @@ from .planilla import parsear_decimal
 __all__ = [
     "leer_revista",
     "leer_deuda",
+    "leer_revista_excel",
+    "leer_deuda_excel",
+    "es_excel",
     "PeriodoRevista",
     "FilaDeuda",
     "LecturaRevista",
@@ -372,7 +376,9 @@ class LecturaRevista:
 
 
 def leer_revista(ruta: str | Path, dpi: int = OCR_DPI) -> LecturaRevista:
-    """Lee el PDF de «Situación de Revista» de SICAM."""
+    """Lee la «Situación de Revista» de SICAM, en planilla o en PDF."""
+    if es_excel(ruta):
+        return leer_revista_excel(ruta)
     ruta = Path(ruta)
     if not ruta.exists():
         raise ErrorFuente(f"No encontré el archivo: {ruta}")
@@ -505,7 +511,9 @@ class LecturaDeuda:
 
 
 def leer_deuda(ruta: str | Path, dpi: int = OCR_DPI) -> LecturaDeuda:
-    """Lee el PDF de «Detalle de la Deuda» de SICAM."""
+    """Lee el «Detalle de la Deuda» de SICAM, en planilla o en PDF."""
+    if es_excel(ruta):
+        return leer_deuda_excel(ruta)
     ruta = Path(ruta)
     if not ruta.exists():
         raise ErrorFuente(f"No encontré el archivo: {ruta}")
@@ -769,6 +777,161 @@ def historia_desde_sicam(
     historia.lectura_revista = revista
     historia.lectura_deuda = deuda
     return historia
+
+
+# ----------------------------------------------------------------- vía Excel
+#
+# SICAM también exporta los dos reportes en planilla. Es el camino preferible:
+# los importes y los períodos vienen exactos, sin OCR de por medio, y se leen
+# los renglones que el PDF vectorizado dejaba fuera de alcance.
+
+_EXTENSIONES_EXCEL = {".xlsx", ".xlsm", ".xltx"}
+
+# Columnas del «Detalle de la Deuda» exportado.
+_XL_DEUDA_DESDE, _XL_DEUDA_HASTA = 0, 1
+_XL_DEUDA_CAT_HISTORICA, _XL_DEUDA_CAT_ACTUAL = 2, 3
+_XL_DEUDA_BENEFICIO = 4
+_XL_DEUDA_MESES_APORTES = 5
+_XL_DEUDA_CAPITAL_SUBTOTAL = 11
+_XL_DEUDA_INTERESES_SUBTOTAL = 15
+_XL_DEUDA_TOTAL = 16
+
+# Columnas de la «Situación de Revista» exportada.
+_XL_REV_INICIO, _XL_REV_CESE, _XL_REV_CODIGO = 0, 1, 2
+_XL_REV_TIPO_SOCIEDAD, _XL_REV_CATEGORIA = 3, 4
+_XL_REV_BENEF_DESDE, _XL_REV_BENEF_HASTA, _XL_REV_BENEF_TIPO = 9, 10, 11
+
+
+def es_excel(ruta: str | Path) -> bool:
+    return Path(ruta).suffix.lower() in _EXTENSIONES_EXCEL
+
+
+def _filas_excel(ruta: Path) -> list[tuple]:
+    try:
+        import openpyxl
+    except ImportError as exc:
+        raise ErrorFuente(
+            "Leer los reportes de SICAM en planilla necesita openpyxl:\n"
+            "    pip install openpyxl"
+        ) from exc
+
+    try:
+        libro = openpyxl.load_workbook(str(ruta), read_only=True, data_only=True)
+    except Exception as exc:
+        raise ErrorFuente(f"No pude abrir {ruta.name}: {exc}") from exc
+    try:
+        return [tuple(fila) for fila in libro[libro.sheetnames[0]].iter_rows(values_only=True)]
+    finally:
+        libro.close()
+
+
+def _celda_excel(fila: tuple, indice: int) -> str:
+    """Texto de una celda, sin los espacios duros que mete el export."""
+    if indice >= len(fila) or fila[indice] is None:
+        return ""
+    return str(fila[indice]).replace("\xa0", " ").strip()
+
+
+def _periodo_excel(fila: tuple, indice: int) -> Periodo | None:
+    """El export trae los períodos como fecha o como ``MM/AAAA``."""
+    if indice >= len(fila):
+        return None
+    valor = fila[indice]
+    if valor is None:
+        return None
+    if isinstance(valor, datetime):
+        return Periodo(valor.year, valor.month)
+    return _periodo(str(valor).replace("\xa0", " "))
+
+
+def _monto_excel(fila: tuple, indice: int) -> Decimal:
+    """Importe del export: formato anglosajón y espacios duros."""
+    if indice >= len(fila) or fila[indice] is None:
+        return CERO
+    valor = fila[indice]
+    if isinstance(valor, (int, float, Decimal)):
+        return Decimal(str(valor))
+    texto = str(valor).replace("\xa0", "").replace(" ", "").replace(",", "")
+    if not texto or texto in {"-", "."}:
+        return CERO
+    try:
+        return Decimal(texto)
+    except InvalidOperation:
+        return CERO
+
+
+def leer_deuda_excel(ruta: str | Path) -> LecturaDeuda:
+    """Lee el «Detalle de la Deuda» exportado a planilla."""
+    ruta = Path(ruta)
+    if not ruta.exists():
+        raise ErrorFuente(f"No encontré el archivo: {ruta}")
+
+    lectura = LecturaDeuda()
+    descartadas = 0
+    for fila in _filas_excel(ruta):
+        desde = _periodo_excel(fila, _XL_DEUDA_DESDE)
+        if desde is None:
+            continue                      # encabezados y filas de título
+        hasta = _periodo_excel(fila, _XL_DEUDA_HASTA) or desde
+        if hasta < desde:
+            descartadas += 1
+            continue
+        lectura.filas.append(
+            FilaDeuda(
+                desde=desde,
+                hasta=hasta,
+                categoria_historica=_celda_excel(fila, _XL_DEUDA_CAT_HISTORICA),
+                categoria_actual=_celda_excel(fila, _XL_DEUDA_CAT_ACTUAL),
+                beneficio_aplicado=_celda_excel(fila, _XL_DEUDA_BENEFICIO),
+                meses_aportes=_monto_excel(fila, _XL_DEUDA_MESES_APORTES),
+                capital_subtotal=_monto_excel(fila, _XL_DEUDA_CAPITAL_SUBTOTAL),
+                intereses_subtotal=_monto_excel(fila, _XL_DEUDA_INTERESES_SUBTOTAL),
+                total=_monto_excel(fila, _XL_DEUDA_TOTAL),
+            )
+        )
+
+    if not lectura.filas:
+        raise ErrorFuente(
+            f"No reconocí ningún renglón en {ruta.name}. ¿Es el «Detalle de la "
+            "Deuda» de SICAM exportado a planilla?"
+        )
+    if descartadas:
+        lectura.advertencias.append(
+            f"{descartadas} renglón(es) con período invertido; se omitieron."
+        )
+    return lectura
+
+
+def leer_revista_excel(ruta: str | Path) -> LecturaRevista:
+    """Lee la «Situación de Revista» exportada a planilla."""
+    ruta = Path(ruta)
+    if not ruta.exists():
+        raise ErrorFuente(f"No encontré el archivo: {ruta}")
+
+    lectura = LecturaRevista()
+    for fila in _filas_excel(ruta):
+        inicio = _periodo_excel(fila, _XL_REV_INICIO)
+        if inicio is None:
+            continue
+        lectura.periodos.append(
+            PeriodoRevista(
+                inicio=inicio,
+                cese=_periodo_excel(fila, _XL_REV_CESE),
+                codigo_actividad=_celda_excel(fila, _XL_REV_CODIGO),
+                tipo_sociedad=_celda_excel(fila, _XL_REV_TIPO_SOCIEDAD),
+                categoria_optativa=_celda_excel(fila, _XL_REV_CATEGORIA),
+                beneficio_desde=_periodo_excel(fila, _XL_REV_BENEF_DESDE),
+                beneficio_hasta=_periodo_excel(fila, _XL_REV_BENEF_HASTA),
+                tipo_beneficio=_celda_excel(fila, _XL_REV_BENEF_TIPO),
+            )
+        )
+
+    if not lectura.periodos:
+        raise ErrorFuente(
+            f"No reconocí ningún tramo en {ruta.name}. ¿Es la «Situación de "
+            "Revista» de SICAM exportada a planilla?"
+        )
+    return lectura
 
 
 def leer_sicam(
