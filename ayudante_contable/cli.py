@@ -20,7 +20,7 @@ from .config import VARIABLES_ENTORNO, Configuracion
 from .fuentes.base import CredencialesANSES, ErrorFuente
 from .lote import ErrorLote
 from .modelo.dominio import formatear_cuil, normalizar_cuil
-from .reportes import consola, exportar, html
+from .reportes import calculadora, consola, exportar, html
 from .seguridad.auditoria import RegistroAuditoria
 from .seguridad.boveda import Boveda, ErrorBoveda
 from .seguridad.redaccion import redactar, registrar_secreto
@@ -55,6 +55,10 @@ def _emitir(informe: Informe, args, config: Configuracion) -> int:
         generados.append(html.exportar_html(informe, destino / f"{marca}-informe.html"))
     if args.json or args.todo:
         generados.append(exportar.exportar_json(informe, destino / f"{marca}-informe.json"))
+    if args.calculadora or args.todo:
+        generados.append(
+            calculadora.exportar_calculadora(informe, destino / f"{marca}-calculadora.json")
+        )
 
     if generados:
         print("Archivos generados:")
@@ -405,6 +409,11 @@ def _agregar_opciones_salida(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--csv", action="store_true", help="Exportar CSV (línea, hallazgos, detalle).")
     sub.add_argument("--html", action="store_true", help="Exportar el informe en HTML.")
     sub.add_argument("--json", action="store_true", help="Exportar el informe en JSON.")
+    sub.add_argument(
+        "--calculadora",
+        action="store_true",
+        help="Exportar el historial para abrir con la Calculadora de Aportes.",
+    )
     sub.add_argument("--todo", action="store_true", help="Exportar en todos los formatos.")
     sub.add_argument("--parametros", type=Path, help="Tabla de parámetros previsionales.")
     sub.add_argument("--nombre", help="Nombre del afiliado, para el encabezado del informe.")

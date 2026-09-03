@@ -59,6 +59,7 @@ class PruebasAnalizar(unittest.TestCase):
         self.assertEqual(
             generados,
             [
+                "20123456786-calculadora.json",
                 "20123456786-detalle.csv",
                 "20123456786-hallazgos.csv",
                 "20123456786-informe.html",

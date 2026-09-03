@@ -354,7 +354,7 @@ ayudante-contable entorno     Muestra rutas y variables en uso
 ```
 
 Opciones de salida comunes a `analizar` y `anses`: `--csv`, `--html`, `--json`,
-`--todo`, `--salida CARPETA`, `--parametros ARCHIVO`, `--nombre "APELLIDO, Nombre"`.
+`--calculadora`, `--todo`, `--salida CARPETA`, `--parametros ARCHIVO`, `--nombre "APELLIDO, Nombre"`.
 
 **Códigos de salida**, para encadenar en scripts del estudio:
 
@@ -374,6 +374,23 @@ Opciones de salida comunes a `analizar` y `anses`: `--csv`, `--html`, `--json`,
 | `AYUDANTE_OPERADOR` | Nombre que queda asentado en la auditoría |
 
 ---
+
+## Cargar el resultado en la Calculadora de Aportes
+
+`--calculadora` escribe un `-calculadora.json` con los períodos válidos ya
+armados, listo para abrir desde **📂 Abrir Historial** en la Calculadora de
+Aportes. Evita tipear los períodos de a uno.
+
+La conversión respeta dos cosas del formato de esa aplicación:
+
+- Trabaja **con precisión de día**, así que cada tramo se abre el día 1 del mes
+  inicial y se cierra el último día del mes final (febrero bisiesto incluido).
+- Sus períodos de autónomo admiten **deudas** que ella misma resta. Acá los
+  tramos ya vienen netos, así que la lista de deudas va vacía a propósito:
+  restar dos veces lo mismo bajaría el cómputo sin motivo.
+
+La fecha de nacimiento y la edad jubilatoria requerida quedan en blanco: no
+salen de la historia laboral y las carga el estudio en la propia aplicación.
 
 ## Usarlo como biblioteca
 
