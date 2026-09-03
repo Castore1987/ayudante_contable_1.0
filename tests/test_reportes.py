@@ -85,14 +85,40 @@ class PruebasExportacion(unittest.TestCase):
         with ruta.open(encoding="utf-8-sig", newline="") as archivo:
             return list(csv.DictReader(archivo, delimiter=";"))
 
-    def test_la_linea_de_servicios_trae_inicio_y_fin(self):
+    def test_la_linea_de_servicios_solo_trae_periodos_validos(self):
+        """El informe de ejemplo no tiene meses válidos: queda solo el total."""
         filas = self._leer_csv(
             exportar.exportar_linea_servicios(self.informe, self.carpeta / "l.csv")
         )
+        self.assertEqual(len(filas), 1)
+        self.assertEqual(filas[-1]["empleador_regimen"], "TOTAL DE APORTES VÁLIDOS")
+        self.assertEqual(filas[-1]["meses_totales"], "0")
+
+    def test_la_linea_de_servicios_trae_las_cinco_columnas_pedidas(self):
+        from tests.ayuda import historia, meses, parametros
+        from ayudante_contable.analisis.validador import analizar
+
+        informe = analizar(historia(meses((2020, 1), (2021, 6))), parametros())
+        filas = self._leer_csv(
+            exportar.exportar_linea_servicios(informe, self.carpeta / "v.csv")
+        )
+        self.assertEqual(
+            list(filas[0]),
+            ["empleador_regimen", "desde", "hasta", "anios", "meses", "meses_totales"],
+        )
+        self.assertEqual(filas[0]["desde"], "01/2020")
+        self.assertEqual(filas[0]["hasta"], "06/2021")
+        self.assertEqual((filas[0]["anios"], filas[0]["meses"]), ("1", "6"))
+        self.assertEqual(filas[-1]["empleador_regimen"], "TOTAL DE APORTES VÁLIDOS")
+        self.assertEqual((filas[-1]["anios"], filas[-1]["meses"]), ("1", "6"))
+
+    def test_el_detalle_de_tramos_conserva_el_porque(self):
+        filas = self._leer_csv(
+            exportar.exportar_tramos_detalle(self.informe, self.carpeta / "t.csv")
+        )
         self.assertEqual(len(filas), 2)
-        self.assertEqual(filas[0]["inicio"], "01/2020")
-        self.assertEqual(filas[0]["fin"], "06/2020")
         self.assertEqual(filas[0]["meses_bajo_minimo"], "6")
+        self.assertEqual(filas[0]["meses_validos"], "0")
 
     def test_el_detalle_trae_una_fila_por_periodo(self):
         filas = self._leer_csv(exportar.exportar_detalle(self.informe, self.carpeta / "d.csv"))

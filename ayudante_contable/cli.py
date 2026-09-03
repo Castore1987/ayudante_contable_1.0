@@ -46,6 +46,9 @@ def _emitir(informe: Informe, args, config: Configuracion) -> int:
         generados.append(
             exportar.exportar_linea_servicios(informe, destino / f"{marca}-linea-servicios.csv")
         )
+        generados.append(
+            exportar.exportar_tramos_detalle(informe, destino / f"{marca}-tramos-detalle.csv")
+        )
         generados.append(exportar.exportar_hallazgos(informe, destino / f"{marca}-hallazgos.csv"))
         generados.append(exportar.exportar_detalle(informe, destino / f"{marca}-detalle.csv"))
     if args.html or args.todo:

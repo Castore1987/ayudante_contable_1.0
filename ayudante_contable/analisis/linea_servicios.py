@@ -19,12 +19,39 @@ from .evaluacion import EvaluacionRegistro, evaluar_historia
 from .parametros import ParametrosPrevisionales
 
 __all__ = [
+    "TramoValido",
     "IntervaloConsolidado",
     "LineaServicios",
     "construir_linea_servicios",
 ]
 
 CERO = Decimal("0")
+
+
+ETIQUETA_INDEPENDIENTE = "Autónomo / Monotributo"
+
+
+@dataclass(frozen=True)
+class TramoValido:
+    """Un tramo continuo de meses que **sí** computan.
+
+    Es la línea que se vuelca al formulario: sin los meses que no computan y
+    sin el detalle de por qué. Autónomo y monotributo son un mismo régimen a
+    estos efectos, así que un pase de uno a otro no corta el tramo.
+    """
+
+    etiqueta: str
+    inicio: Periodo
+    fin: Periodo
+    meses: int
+
+    @property
+    def anios(self) -> int:
+        return self.meses // 12
+
+    @property
+    def meses_resto(self) -> int:
+        return self.meses % 12
 
 
 @dataclass(frozen=True)
@@ -49,6 +76,7 @@ class LineaServicios:
 
     cuil: str
     tramos: list[TramoServicio] = field(default_factory=list)
+    tramos_validos: list[TramoValido] = field(default_factory=list)
     consolidado: list[IntervaloConsolidado] = field(default_factory=list)
     lagunas: list[IntervaloConsolidado] = field(default_factory=list)
     meses_computables: int = 0
@@ -56,6 +84,23 @@ class LineaServicios:
     meses_descartados: int = 0
     primer_periodo: Periodo | None = None
     ultimo_periodo: Periodo | None = None
+
+    @property
+    def anios(self) -> int:
+        return self.meses_computables // 12
+
+    @property
+    def meses_resto(self) -> int:
+        return self.meses_computables % 12
+
+    @property
+    def suma_tramos_validos(self) -> int:
+        """Suma de los tramos válidos, que puede superar el total consolidado."""
+        return sum(t.meses for t in self.tramos_validos)
+
+    @property
+    def meses_superpuestos(self) -> int:
+        return max(self.suma_tramos_validos - self.meses_computables, 0)
 
     @property
     def anios_computables(self) -> Decimal:
@@ -176,6 +221,44 @@ def _detectar_lagunas(
     return [l for l in lagunas if l.meses >= minimo_informable]
 
 
+def _etiqueta_valida(evaluacion: EvaluacionRegistro) -> str:
+    """Agrupa por empleador; autónomo y monotributo van juntos."""
+    registro = evaluacion.registro
+    if registro.tipo in (TipoAporte.AUTONOMO, TipoAporte.MONOTRIBUTO):
+        return ETIQUETA_INDEPENDIENTE
+    return registro.nombre_visible
+
+
+def _construir_tramos_validos(
+    evaluaciones: list[EvaluacionRegistro],
+) -> list[TramoValido]:
+    """Arma los tramos usando solo los meses que computan."""
+    por_etiqueta: dict[str, set[Periodo]] = {}
+    for evaluacion in evaluaciones:
+        if evaluacion.computa_servicio:
+            por_etiqueta.setdefault(_etiqueta_valida(evaluacion), set()).add(
+                evaluacion.periodo
+            )
+
+    tramos: list[TramoValido] = []
+    for etiqueta, periodos in por_etiqueta.items():
+        ordenados = sorted(periodos)
+        inicio = anterior = ordenados[0]
+        for periodo in ordenados[1:]:
+            if periodo.ordinal - anterior.ordinal > 1:
+                tramos.append(
+                    TramoValido(etiqueta, inicio, anterior, anterior.ordinal - inicio.ordinal + 1)
+                )
+                inicio = periodo
+            anterior = periodo
+        tramos.append(
+            TramoValido(etiqueta, inicio, anterior, anterior.ordinal - inicio.ordinal + 1)
+        )
+
+    tramos.sort(key=lambda t: (t.inicio.ordinal, t.etiqueta))
+    return tramos
+
+
 def construir_linea_servicios(
     historia: HistoriaLaboral,
     parametros: ParametrosPrevisionales,
@@ -237,6 +320,7 @@ def construir_linea_servicios(
     return LineaServicios(
         cuil=historia.cuil,
         tramos=tramos,
+        tramos_validos=_construir_tramos_validos(evaluaciones),
         consolidado=consolidado,
         lagunas=lagunas,
         meses_computables=len(meses_computables),

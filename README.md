@@ -27,28 +27,36 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 | `EMPLEOS_SIMULTANEOS` | Meses con más de un empleador (se computan una sola vez) | información |
 | `CUIL_INVALIDO` / `SIN_REGISTROS` | Problemas con el dato de entrada | error |
 
-Y produce la **línea de servicios**, que es la salida principal: cada relación
-laboral con su fecha de inicio y fin, los meses **declarados**, los meses
-**válidos** (los que realmente computan) y la antigüedad del tramo; al pie, el
-total de aportes válidos en años y meses.
+Y produce la **línea de servicios**, que es la salida principal: solo los
+períodos válidos, con su duración en años y meses, y el total al pie.
 
 ```
-  Desde    Hasta    Empleador / Régimen        Modalidad         Declar.  Válidos  Antigüedad
-  11/1978  04/1985  Autónomo (act. 746)        Autónomo               78       78      6a 6m
-  10/1992  12/1995  Autónomo (act. 902)        Autónomo               39       34     2a 10m
-  05/2008  08/2013  INDUSTRIAS DEL SUR SA      Rel. de dependencia    64       64      5a 4m
-                    SUMA DE TRAMOS                                   468      450
+LÍNEA DE SERVICIOS — PERÍODOS VÁLIDOS
+  Empleador / Régimen           Desde    Hasta  Años  Meses
+  ──────────────────────────  ───────  ───────  ────  ─────
+  Autónomo / Monotributo      11/1978  04/1985     6      6
+  Autónomo / Monotributo      02/1990  01/1994     4      0
+  Autónomo / Monotributo      07/1994  12/1995     1      6
+  INDUSTRIAS DEL SUR SA       05/2008  08/2013     5      4
 
-  ══════════════════════════════════════════════════════════
-  APORTES VÁLIDOS   348 meses   =   29 año(s) y 0 mes(es)
-  ══════════════════════════════════════════════════════════
-  (la suma de tramos da 450; 102 mes(es) se superponen entre regímenes)
+  TOTAL DE APORTES VÁLIDOS                        29      0
+
+  348 meses computables en total.
 ```
 
-La distinción entre **declarados** y **válidos** es el corazón del informe: los
-declarados incluyen meses que no computan (bajo el mínimo, sin aporte ingresado,
-prescriptos). Y el total al pie no es la suma de la columna, porque los meses
-con dos regímenes simultáneos cuentan una sola vez.
+Tres cosas que definen esta tabla:
+
+- **Solo períodos válidos.** Los meses que no computan ya quedaron afuera, así
+  que un tramo interrumpido por meses inválidos aparece partido en dos. En el
+  ejemplo, el corte entre 01/1994 y 07/1994 son cinco meses prescriptos.
+- **Autónomo y monotributo son un mismo régimen**, así que pasar de uno a otro
+  no corta el tramo.
+- **El total no es la suma de la columna.** Los meses con dos regímenes
+  simultáneos se cuentan una sola vez; cuando hay superposición, el informe
+  dice cuántos meses son.
+
+El porqué de cada mes descartado no se pierde: va al CSV `-tramos-detalle.csv`
+y a los hallazgos.
 
 ---
 

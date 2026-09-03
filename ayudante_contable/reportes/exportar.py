@@ -9,7 +9,13 @@ from pathlib import Path
 from ..analisis.validador import Informe
 from ..modelo.dominio import formatear_cuil
 
-__all__ = ["exportar_linea_servicios", "exportar_hallazgos", "exportar_detalle", "exportar_json"]
+__all__ = [
+    "exportar_linea_servicios",
+    "exportar_tramos_detalle",
+    "exportar_hallazgos",
+    "exportar_detalle",
+    "exportar_json",
+]
 
 
 def _escribir(ruta: Path, encabezados: list[str], filas: list[list[str]]) -> Path:
@@ -22,7 +28,38 @@ def _escribir(ruta: Path, encabezados: list[str], filas: list[list[str]]) -> Pat
 
 
 def exportar_linea_servicios(informe: Informe, ruta: str | Path) -> Path:
-    """Tramos con fecha de inicio y fin, listos para volcar al formulario."""
+    """La línea de servicios válidos, lista para volcar al formulario."""
+    linea = informe.linea
+    filas = [
+        [
+            tramo.etiqueta,
+            str(tramo.inicio),
+            str(tramo.fin),
+            tramo.anios,
+            tramo.meses_resto,
+            tramo.meses,
+        ]
+        for tramo in linea.tramos_validos
+    ]
+    filas.append(
+        [
+            "TOTAL DE APORTES VÁLIDOS",
+            "",
+            "",
+            linea.anios,
+            linea.meses_resto,
+            linea.meses_computables,
+        ]
+    )
+    return _escribir(
+        Path(ruta),
+        ["empleador_regimen", "desde", "hasta", "anios", "meses", "meses_totales"],
+        filas,
+    )
+
+
+def exportar_tramos_detalle(informe: Informe, ruta: str | Path) -> Path:
+    """Los tramos con el detalle de por qué un mes no computó."""
     filas = [
         [
             tramo.empleador,
@@ -32,9 +69,6 @@ def exportar_linea_servicios(informe: Informe, ruta: str | Path) -> Path:
             str(tramo.fin),
             tramo.meses_declarados,
             tramo.meses_computables,
-            tramo.antiguedad_texto,
-            tramo.meses_calendario,
-            tramo.meses_con_remuneracion,
             tramo.meses_bajo_minimo,
             tramo.meses_sin_aporte_ingresado,
             f"{tramo.remuneracion_total:.2f}",
@@ -44,19 +78,9 @@ def exportar_linea_servicios(informe: Informe, ruta: str | Path) -> Path:
     return _escribir(
         Path(ruta),
         [
-            "empleador",
-            "cuit",
-            "regimen",
-            "inicio",
-            "fin",
-            "meses_declarados",
-            "meses_validos",
-            "antiguedad_tramo",
-            "meses_calendario",
-            "meses_con_remuneracion",
-            "meses_bajo_minimo",
-            "meses_sin_aporte_ingresado",
-            "remuneracion_total",
+            "empleador", "cuit", "regimen", "inicio", "fin",
+            "meses_declarados", "meses_validos", "meses_bajo_minimo",
+            "meses_sin_aporte_ingresado", "remuneracion_total",
         ],
         filas,
     )
@@ -138,6 +162,17 @@ def exportar_json(informe: Informe, ruta: str | Path) -> Path:
             "primer_periodo": str(linea.primer_periodo) if linea.primer_periodo else None,
             "ultimo_periodo": str(linea.ultimo_periodo) if linea.ultimo_periodo else None,
         },
+        "linea_servicios_validos": [
+            {
+                "empleador_regimen": t.etiqueta,
+                "desde": str(t.inicio),
+                "hasta": str(t.fin),
+                "anios": t.anios,
+                "meses": t.meses_resto,
+                "meses_totales": t.meses,
+            }
+            for t in linea.tramos_validos
+        ],
         "linea_servicios": [
             {
                 "empleador": t.empleador,

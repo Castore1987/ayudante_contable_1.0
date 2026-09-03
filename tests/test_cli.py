@@ -64,6 +64,7 @@ class PruebasAnalizar(unittest.TestCase):
                 "20123456786-informe.html",
                 "20123456786-informe.json",
                 "20123456786-linea-servicios.csv",
+                "20123456786-tramos-detalle.csv",
             ],
         )
 

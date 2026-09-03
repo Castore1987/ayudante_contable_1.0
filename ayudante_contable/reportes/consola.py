@@ -50,75 +50,57 @@ def _resumen(informe: Informe) -> list[str]:
 
 
 def _linea_servicios(informe: Informe) -> list[str]:
-    """La línea de servicios: fechas, meses declarados y meses que valen.
+    """La línea de servicios: solo períodos válidos, con años y meses.
 
-    La columna que importa es «Válidos»: los declarados incluyen meses que no
-    computan (bajo el mínimo, sin aporte ingresado, prescriptos). Al pie va el
-    total consolidado, que no es la suma de la columna porque los meses
-    simultáneos se cuentan una sola vez.
+    Cinco columnas y nada más: quién, desde cuándo, hasta cuándo, y cuánto
+    tiempo. Los meses que no computan ya quedaron afuera, así que un tramo
+    interrumpido por meses inválidos aparece partido en dos.
     """
     linea = informe.linea
-    filas = []
-    for tramo in linea.tramos:
-        observaciones = []
-        if tramo.meses_bajo_minimo:
-            observaciones.append(f"{tramo.meses_bajo_minimo} bajo mínimo")
-        if tramo.meses_sin_aporte_ingresado:
-            observaciones.append(f"{tramo.meses_sin_aporte_ingresado} sin ingresar")
-        if tramo.meses_faltantes:
-            observaciones.append(f"{tramo.meses_faltantes} sin declarar")
-        no_computables = tramo.meses_no_computables
-        if no_computables and not observaciones:
-            observaciones.append(f"{no_computables} no computan")
+    filas = [
+        [
+            tramo.etiqueta,
+            str(tramo.inicio),
+            str(tramo.fin),
+            str(tramo.anios),
+            str(tramo.meses_resto),
+        ]
+        for tramo in linea.tramos_validos
+    ]
+
+    # El total va como última fila de la tabla para que quede alineado con las
+    # columnas, en vez de dibujarlo aparte con anchos a mano.
+    if filas:
+        filas.append(["", "", "", "", ""])
         filas.append(
             [
-                str(tramo.inicio),
-                str(tramo.fin),
-                tramo.empleador,
-                tramo.cuit_empleador or "—",
-                tramo.tipo.etiqueta,
-                str(tramo.meses_declarados),
-                str(tramo.meses_computables),
-                tramo.antiguedad_texto,
-                ", ".join(observaciones) or "—",
+                "TOTAL DE APORTES VÁLIDOS",
+                "",
+                "",
+                str(linea.anios),
+                str(linea.meses_resto),
             ]
         )
 
-    suma_declarados = sum(t.meses_declarados for t in linea.tramos)
-    suma_validos = sum(t.meses_computables for t in linea.tramos)
-    filas.append(
-        [
-            "", "", "SUMA DE TRAMOS", "", "",
-            str(suma_declarados), str(suma_validos), "", "",
-        ]
-    )
-
     salida = [
-        titulo("LÍNEA DE SERVICIOS", caracter="─"),
+        titulo("LÍNEA DE SERVICIOS — PERÍODOS VÁLIDOS", caracter="─"),
         tabla(
-            [
-                "Desde", "Hasta", "Empleador / Régimen", "CUIT", "Modalidad",
-                "Declar.", "Válidos", "Antigüedad", "Observaciones",
-            ],
+            ["Empleador / Régimen", "Desde", "Hasta", "Años", "Meses"],
             filas,
-            ["<", "<", "<", "<", "<", ">", ">", ">", "<"],
-            ancho_maximo=30,
+            ["<", ">", ">", ">", ">"],
+            ancho_maximo=38,
         ),
     ]
 
-    duplicados = suma_validos - linea.meses_computables
-    salida.append("")
-    salida.append("  " + "═" * 66)
-    salida.append(
-        f"  APORTES VÁLIDOS   {linea.meses_computables} meses   "
-        f"=   {linea.antiguedad_texto}"
-    )
-    salida.append("  " + "═" * 66)
-    if duplicados > 0:
-        salida.append(
-            f"  (la suma de tramos da {suma_validos}; {duplicados} mes(es) se "
-            "superponen entre regímenes y cuentan una sola vez)"
-        )
+    if filas:
+        salida.append("")
+        salida.append(f"  {linea.meses_computables} meses computables en total.")
+        if linea.meses_superpuestos:
+            salida.append(
+                f"  Los tramos suman {linea.suma_tramos_validos} meses: "
+                f"{linea.meses_superpuestos} figuran en dos regímenes a la vez "
+                "y se cuentan una sola vez."
+            )
     return salida
 
 
