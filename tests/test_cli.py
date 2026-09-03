@@ -72,9 +72,13 @@ class PruebasAnalizar(unittest.TestCase):
         datos = json.loads(
             (self.trabajo / "informes" / "20123456786-informe.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(datos["resumen"]["meses_computables"], 36)
-        self.assertEqual(datos["resumen"]["meses_descartados"], 3)
-        self.assertEqual([l["meses"] for l in datos["lagunas"]], [6])
+        # 36 meses declarados menos los 9 que quedaron bajo la base mínima
+        # (3 de SUPERMERCADO en 2023 y 6 de autónomo en 2025): no computan.
+        self.assertEqual(datos["resumen"]["meses_computables"], 27)
+        # 3 meses declarados sin ingresar + los 9 que quedaron bajo el mínimo.
+        self.assertEqual(datos["resumen"]["meses_descartados"], 12)
+        # Los meses bajo el mínimo abren lagunas donde antes había servicio.
+        self.assertEqual([l["meses"] for l in datos["lagunas"]], [9, 6])
         self.assertEqual(len(datos["linea_servicios"]), 4)
 
     def test_respeta_la_carpeta_de_salida_indicada(self):

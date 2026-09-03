@@ -108,7 +108,9 @@ class PruebasExportacion(unittest.TestCase):
         ruta = exportar.exportar_json(self.informe, self.carpeta / "i.json")
         datos = json.loads(ruta.read_text(encoding="utf-8"))
         self.assertEqual(datos["cuil"], "20-12345678-6")
-        self.assertEqual(datos["antiguedad"]["meses_computables"], 6)
+        # Los 6 meses del informe de ejemplo declaran 100 contra una base
+        # mínima de 1000: quedan bajo el mínimo y ninguno computa.
+        self.assertEqual(datos["antiguedad"]["meses_computables"], 0)
         self.assertEqual(len(datos["linea_servicios"]), 2)
 
     def test_crea_la_carpeta_destino_si_no_existe(self):

@@ -84,6 +84,32 @@ class PruebasIngresoEfectivo(unittest.TestCase):
         self.assertTrue(evaluacion.computa_servicio)
         self.assertTrue(evaluacion.computa_con_reservas)
 
+    def test_un_mes_bajo_el_minimo_no_computa_como_servicio(self):
+        """Regla del estudio: si la remuneración declarada no llega a la base
+        mínima, el mes no constituye servicio, por más que el aporte ingrese."""
+        evaluacion = evaluar_registro(
+            registro(remuneracion_imponible=Decimal("800")), parametros(base=Decimal("1000"))
+        )
+        self.assertTrue(evaluacion.bajo_minimo)
+        self.assertFalse(evaluacion.computa_servicio)
+
+    def test_un_mes_que_llega_al_minimo_si_computa(self):
+        evaluacion = evaluar_registro(
+            registro(remuneracion_imponible=Decimal("1000")), parametros(base=Decimal("1000"))
+        )
+        self.assertFalse(evaluacion.bajo_minimo)
+        self.assertTrue(evaluacion.computa_servicio)
+
+    def test_un_mes_de_autonomo_sin_remuneracion_no_cae_por_el_minimo(self):
+        """Autónomos y servicios anteriores a 06/94 se informan sin sueldo: no
+        hay remuneración que comparar, así que la regla del mínimo no los toca."""
+        evaluacion = evaluar_registro(
+            registro(remuneracion_imponible=Decimal("0"), servicio_reconocido=True),
+            parametros(base=Decimal("1000")),
+        )
+        self.assertFalse(evaluacion.bajo_minimo)
+        self.assertTrue(evaluacion.computa_servicio)
+
     def test_un_mes_sin_remuneracion_no_computa_como_servicio(self):
         evaluacion = evaluar_registro(
             registro(remuneracion_imponible=Decimal("0")), parametros()

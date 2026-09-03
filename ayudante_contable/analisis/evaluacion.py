@@ -66,7 +66,7 @@ class EvaluacionRegistro:
 
     @property
     def computa_servicio(self) -> bool:
-        """El mes suma como servicio con aportes (criterio conservador).
+        """El mes suma como servicio con aportes.
 
         Se cuenta el mes declarado salvo que conste que el aporte no ingresó.
         Un ingreso parcial o incierto se cuenta, pero queda señalado para que
@@ -74,6 +74,11 @@ class EvaluacionRegistro:
         """
         if self.prescripto:
             # Prescripto no es ni aporte ni deuda: simplemente no cuenta.
+            return False
+        if self.bajo_minimo:
+            # La remuneración declarada no alcanzó la base imponible mínima del
+            # período: el mes no computa como servicio. Un aporte calculado
+            # sobre una base insuficiente no constituye el servicio del mes.
             return False
         if not self.registro.hay_servicio:
             return False

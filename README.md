@@ -13,7 +13,7 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 
 | Control | Qué detecta | Severidad |
 |---|---|---|
-| `APORTE_BAJO_MINIMO` | Remuneración imponible por debajo de la base mínima del período | error |
+| `APORTE_BAJO_MINIMO` | Remuneración declarada bajo la base mínima: el mes **no computa** | error |
 | `APORTE_NO_INGRESADO` | Meses declarados cuyo aporte nunca ingresó | error |
 | `APORTE_INGRESO_PARCIAL` | El monto ingresado es menor al declarado | advertencia |
 | `APORTE_INGRESO_INCIERTO` | La fuente no informa si el aporte ingresó | advertencia |
@@ -339,10 +339,21 @@ print([h.codigo for h in informe.errores])
 
 Decisiones que toma la herramienta y conviene conocer antes de firmar un informe:
 
-- **Un mes computa** si tiene remuneración declarada y no consta que el aporte
-  no ingresó. Un ingreso parcial o sin dato **se computa igual, pero queda
-  señalado** como "mes con reservas": el criterio conservador sería descartarlo,
-  pero eso escondería el problema en lugar de mostrarlo.
+- **Un mes computa** si tiene remuneración declarada, esa remuneración alcanza
+  la base imponible mínima del período, y no consta que el aporte no ingresó. Un
+  ingreso parcial o sin dato **se computa igual, pero queda señalado** como "mes
+  con reservas": el criterio conservador sería descartarlo, pero eso escondería
+  el problema en lugar de mostrarlo.
+- **La remuneración declarada por debajo de la base mínima no computa.** No es
+  solo un defecto a reclamar: el mes no constituye servicio, aunque el aporte
+  haya ingresado, porque se calculó sobre una base insuficiente. Sale como
+  `APORTE_BAJO_MINIMO` y el mes pasa a "descartado".
+- **Ojo con los regímenes simultáneos**: si el mismo mes tiene otro régimen que
+  sí computa, el mes de calendario sigue contando por esa vía. Sobre un caso
+  real, ocho meses de relación de dependencia quedaron por debajo del mínimo y
+  dejaron de computar, pero la antigüedad no bajó porque el afiliado estaba
+  además inscripto como autónomo con esos meses regularizados. El informe
+  muestra las dos cosas: el hallazgo y el mes que se salva.
 - **Un mes cuenta aunque no traiga remuneración** si la fuente lo reconoce como
   servicio: los anteriores a 06/94 y los períodos de autónomo se informan sin
   sueldo, y descartarlos le borraría antigüedad al afiliado.

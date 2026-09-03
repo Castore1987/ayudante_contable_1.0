@@ -227,8 +227,9 @@ def _control_minimo(evaluaciones: list[EvaluacionRegistro]) -> list[Hallazgo]:
     def mensaje(empleador: str, grupo: list[EvaluacionRegistro]) -> str:
         faltante = sum((e.faltante_base for e in grupo), start=Decimal("0"))
         return (
-            f"{empleador}: {len(grupo)} mes(es) con remuneración imponible por debajo "
-            f"de la base mínima. Diferencia acumulada {_formato_monto(faltante)}."
+            f"{empleador}: {len(grupo)} mes(es) con remuneración declarada por debajo "
+            f"de la base mínima. Diferencia acumulada {_formato_monto(faltante)}. "
+            "Esos meses NO computan como servicio."
         )
 
     return _hallazgos_por_empleador(
