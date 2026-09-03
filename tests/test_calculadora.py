@@ -88,8 +88,33 @@ class PruebasClasificacion(unittest.TestCase):
         self.assertEqual(datos["autonomos"][0]["fin"], "31/12/2020")
 
     def test_todo_sale_como_caja_nacional(self):
-        datos = historial_calculadora(_informe(meses((2020, 1), (2020, 6))))
+        """HLAB, ARCA y SICAM son registros nacionales.
+
+        Un servicio de caja provincial no transferida no figura en ellos, así
+        que nada de lo que exporta este módulo puede ser provincial.
+        """
+        datos = historial_calculadora(
+            _informe(
+                meses((2020, 1), (2020, 6), empleador="ACME SA"),
+                meses((2021, 1), (2021, 6), cuit=None, empleador="Independiente",
+                      tipo=TipoAporte.AUTONOMO),
+            )
+        )
         self.assertFalse(datos["relacion_dependencia"][0]["es_provincial"])
+        self.assertFalse(datos["autonomos"][0]["es_provincial"])
+
+    def test_autonomo_y_monotributo_nunca_son_provinciales(self):
+        """Por régimen, no por la fuente: siempre son caja nacional."""
+        datos = historial_calculadora(
+            _informe(
+                meses((2020, 1), (2020, 6), cuit=None, empleador="Independiente",
+                      tipo=TipoAporte.AUTONOMO),
+                meses((2021, 1), (2021, 6), cuit=None, empleador="Independiente",
+                      tipo=TipoAporte.MONOTRIBUTO),
+            )
+        )
+        self.assertTrue(datos["autonomos"])
+        self.assertTrue(all(not p["es_provincial"] for p in datos["autonomos"]))
 
 
 class PruebasPeriodosValidos(unittest.TestCase):

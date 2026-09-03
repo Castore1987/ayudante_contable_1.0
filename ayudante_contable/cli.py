@@ -60,6 +60,14 @@ def _emitir(informe: Informe, args, config: Configuracion) -> int:
             calculadora.exportar_calculadora(informe, destino / f"{marca}-calculadora.json")
         )
 
+    if any(r.name.endswith("-calculadora.json") for r in generados):
+        print(
+            "\nEl archivo para la Calculadora de Aportes trae solo servicios de caja\n"
+            "NACIONAL, que es lo que registran ANSES, ARCA y SICAM. Si el afiliado\n"
+            "tiene servicios de una caja provincial no transferida, cargalos aparte\n"
+            "en la calculadora con su certificación.\n"
+        )
+
     if generados:
         print("Archivos generados:")
         for ruta in generados:

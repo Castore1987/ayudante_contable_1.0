@@ -27,8 +27,18 @@ from ..modelo.dominio import Periodo, TipoAporte, formatear_cuil
 
 __all__ = ["exportar_calculadora", "historial_calculadora"]
 
-# La calculadora separa caja nacional de provincial. Todo lo que sale de ANSES,
-# ARCA y SICAM es nacional; lo provincial se carga aparte en la propia app.
+# La calculadora distingue caja nacional de provincial porque eso define la caja
+# otorgante. Todo lo que exporta este módulo es nacional, por dos motivos
+# distintos que conviene no confundir:
+#
+# * Autónomos y monotributo son nacionales **siempre**, por régimen.
+# * La relación de dependencia podría ser provincial, pero no la que sale de
+#   acá: HLAB, ARCA y SICAM son registros del sistema nacional. Un servicio de
+#   una caja provincial no transferida no figura en ellos; se acredita con la
+#   certificación de esa caja y se carga a mano en la calculadora.
+#
+# Por eso el informe avisa que los períodos provinciales, si los hay, quedan
+# fuera de este archivo.
 ES_PROVINCIAL = False
 
 
@@ -82,6 +92,7 @@ def historial_calculadora(informe: Informe) -> dict:
             )
 
     nombre = informe.historia.nombre or formatear_cuil(informe.historia.cuil)
+
     return {
         "metadata": {
             "nombre": nombre,
