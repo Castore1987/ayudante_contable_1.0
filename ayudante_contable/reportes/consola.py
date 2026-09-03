@@ -50,8 +50,16 @@ def _resumen(informe: Informe) -> list[str]:
 
 
 def _linea_servicios(informe: Informe) -> list[str]:
+    """La línea de servicios: fechas, meses declarados y meses que valen.
+
+    La columna que importa es «Válidos»: los declarados incluyen meses que no
+    computan (bajo el mínimo, sin aporte ingresado, prescriptos). Al pie va el
+    total consolidado, que no es la suma de la columna porque los meses
+    simultáneos se cuentan una sola vez.
+    """
+    linea = informe.linea
     filas = []
-    for tramo in informe.linea.tramos:
+    for tramo in linea.tramos:
         observaciones = []
         if tramo.meses_bajo_minimo:
             observaciones.append(f"{tramo.meses_bajo_minimo} bajo mínimo")
@@ -59,26 +67,59 @@ def _linea_servicios(informe: Informe) -> list[str]:
             observaciones.append(f"{tramo.meses_sin_aporte_ingresado} sin ingresar")
         if tramo.meses_faltantes:
             observaciones.append(f"{tramo.meses_faltantes} sin declarar")
+        no_computables = tramo.meses_no_computables
+        if no_computables and not observaciones:
+            observaciones.append(f"{no_computables} no computan")
         filas.append(
             [
+                str(tramo.inicio),
+                str(tramo.fin),
                 tramo.empleador,
                 tramo.cuit_empleador or "—",
                 tramo.tipo.etiqueta,
-                str(tramo.inicio),
-                str(tramo.fin),
                 str(tramo.meses_declarados),
+                str(tramo.meses_computables),
+                tramo.antiguedad_texto,
                 ", ".join(observaciones) or "—",
             ]
         )
 
-    return [
-        titulo("LÍNEA DE SERVICIOS (por empleador)", caracter="─"),
+    suma_declarados = sum(t.meses_declarados for t in linea.tramos)
+    suma_validos = sum(t.meses_computables for t in linea.tramos)
+    filas.append(
+        [
+            "", "", "SUMA DE TRAMOS", "", "",
+            str(suma_declarados), str(suma_validos), "", "",
+        ]
+    )
+
+    salida = [
+        titulo("LÍNEA DE SERVICIOS", caracter="─"),
         tabla(
-            ["Empleador", "CUIT", "Régimen", "Inicio", "Fin", "Meses", "Observaciones"],
+            [
+                "Desde", "Hasta", "Empleador / Régimen", "CUIT", "Modalidad",
+                "Declar.", "Válidos", "Antigüedad", "Observaciones",
+            ],
             filas,
-            ["<", "<", "<", ">", ">", ">", "<"],
+            ["<", "<", "<", "<", "<", ">", ">", ">", "<"],
+            ancho_maximo=30,
         ),
     ]
+
+    duplicados = suma_validos - linea.meses_computables
+    salida.append("")
+    salida.append("  " + "═" * 66)
+    salida.append(
+        f"  APORTES VÁLIDOS   {linea.meses_computables} meses   "
+        f"=   {linea.antiguedad_texto}"
+    )
+    salida.append("  " + "═" * 66)
+    if duplicados > 0:
+        salida.append(
+            f"  (la suma de tramos da {suma_validos}; {duplicados} mes(es) se "
+            "superponen entre regímenes y cuentan una sola vez)"
+        )
+    return salida
 
 
 def _consolidado(informe: Informe) -> list[str]:

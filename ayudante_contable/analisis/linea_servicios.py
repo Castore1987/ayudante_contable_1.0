@@ -108,6 +108,7 @@ def _tramo_desde_bloque(bloque: list[EvaluacionRegistro]) -> TramoServicio:
         remuneracion_total=sum(
             (e.registro.remuneracion_imponible for e in bloque), start=CERO
         ),
+        meses_computables=len({e.periodo for e in bloque if e.computa_servicio}),
     )
 
 

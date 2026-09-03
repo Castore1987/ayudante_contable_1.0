@@ -27,9 +27,28 @@ datos y señala lo que no cierra; la conclusión y la certificación son tuyas.
 | `EMPLEOS_SIMULTANEOS` | Meses con más de un empleador (se computan una sola vez) | información |
 | `CUIL_INVALIDO` / `SIN_REGISTROS` | Problemas con el dato de entrada | error |
 
-Y produce la **línea de servicios**: cada relación laboral con su CUIT, régimen,
-fecha de inicio, fecha de fin, meses declarados y observaciones; más el
-consolidado de antigüedad sin duplicar meses de empleo simultáneo.
+Y produce la **línea de servicios**, que es la salida principal: cada relación
+laboral con su fecha de inicio y fin, los meses **declarados**, los meses
+**válidos** (los que realmente computan) y la antigüedad del tramo; al pie, el
+total de aportes válidos en años y meses.
+
+```
+  Desde    Hasta    Empleador / Régimen        Modalidad         Declar.  Válidos  Antigüedad
+  11/1978  04/1985  Autónomo (act. 746)        Autónomo               78       78      6a 6m
+  10/1992  12/1995  Autónomo (act. 902)        Autónomo               39       34     2a 10m
+  05/2008  08/2013  INDUSTRIAS DEL SUR SA      Rel. de dependencia    64       64      5a 4m
+                    SUMA DE TRAMOS                                   468      450
+
+  ══════════════════════════════════════════════════════════
+  APORTES VÁLIDOS   348 meses   =   29 año(s) y 0 mes(es)
+  ══════════════════════════════════════════════════════════
+  (la suma de tramos da 450; 102 mes(es) se superponen entre regímenes)
+```
+
+La distinción entre **declarados** y **válidos** es el corazón del informe: los
+declarados incluyen meses que no computan (bajo el mínimo, sin aporte ingresado,
+prescriptos). Y el total al pie no es la suma de la columna, porque los meses
+con dos regímenes simultáneos cuentan una sola vez.
 
 ---
 
@@ -391,6 +410,11 @@ Decisiones que toma la herramienta y conviene conocer antes de firmar un informe
   sueldo, y descartarlos le borraría antigüedad al afiliado.
 - **Los empleos simultáneos suman un solo mes** de antigüedad, aunque figuren
   dos empleadores.
+- **El código de actividad 11 de la situación de revista no aporta.** Declara
+  actividad, pero no genera obligación, así que sus meses quedan fuera del
+  cómputo. Si un mes de esos igual tiene renglón en el detalle de deuda, vuelve
+  a contar: la deuda prueba que hubo obligación. La lista de códigos no
+  aportantes está en `CODIGOS_NO_APORTANTES`, en `fuentes/sicam.py`.
 - **Un tramo se corta** cuando hay un mes sin declarar. Si tu criterio es otro,
   subí `meses_interrupcion_tolerada` en las tolerancias.
 - **Sin CUIT, el régimen forma parte de la identidad del tramo**: pasar de

@@ -67,6 +67,11 @@ ART1_LEY_25321 = "art. 1 ley 25.321"
 OCR_DPI = 300
 CERO = Decimal("0")
 
+# Códigos de actividad de la situación de revista que NO generan obligación de
+# aportar. Un tramo con uno de estos códigos declara actividad, pero sus meses
+# no suman al cómputo de aportes: no hay aporte que exigir ni que acreditar.
+CODIGOS_NO_APORTANTES = frozenset({"11"})
+
 # El OCR arrastra los bordes de la tabla como "|", "[", "]" y a veces parte el
 # año ("09/1 992"). Todo eso se limpia antes de interpretar la celda.
 # Bordes y filetes de la tabla que el OCR devuelve como caracteres.
@@ -700,9 +705,16 @@ def historia_desde_sicam(
     informa_deuda = bool(deuda.filas)
 
     # Etiqueta del tramo, por período, tomada de la situación de revista.
+    # Los tramos con código no aportante se saltean: declaran actividad, pero
+    # no generan meses computables. Si un mes de esos igual tiene renglón en el
+    # detalle de deuda, entra más abajo por esa vía, que sí prueba obligación.
     etiqueta: dict[Periodo, str] = {}
+    meses_no_aportantes: set[Periodo] = set()
     for periodo in revista.periodos:
         if periodo.cese is None:
+            continue
+        if periodo.codigo_actividad.strip() in CODIGOS_NO_APORTANTES:
+            meses_no_aportantes |= set(Periodo.rango(periodo.inicio, periodo.cese))
             continue
         rotulo = f"Autónomo (act. {periodo.codigo_actividad or 's/d'}"
         rotulo += f", cat. {periodo.categoria_optativa})" if periodo.categoria_optativa else ")"
@@ -755,6 +767,15 @@ def historia_desde_sicam(
 
     advertencias = list(revista.advertencias) + list(deuda.advertencias)
     advertencias.append(f"Política aplicada a SICAM: {politica.descripcion}.")
+
+    solo_no_aportantes = meses_no_aportantes - set(etiqueta)
+    if solo_no_aportantes:
+        codigos = ", ".join(sorted(CODIGOS_NO_APORTANTES))
+        advertencias.append(
+            f"{len(solo_no_aportantes)} mes(es) declarados en la revista bajo un "
+            f"código de actividad no aportante ({codigos}) quedaron fuera del "
+            "cómputo: declaran actividad, pero no generan aporte."
+        )
     if not informa_deuda:
         advertencias.append(
             "SICAM llegó sin detalle de deuda: los meses de autónomo quedan con "

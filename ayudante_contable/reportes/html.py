@@ -112,6 +112,8 @@ def renderizar_html(informe: Informe) -> str:
             escape(str(t.inicio)),
             escape(str(t.fin)),
             str(t.meses_declarados),
+            f"<strong>{t.meses_computables}</strong>",
+            escape(t.antiguedad_texto),
             str(t.meses_bajo_minimo),
             str(t.meses_sin_aporte_ingresado),
             escape(moneda(t.remuneracion_total)),
@@ -125,13 +127,15 @@ def renderizar_html(informe: Informe) -> str:
             "Régimen",
             "Inicio",
             "Fin",
-            "Meses",
+            "Declarados",
+            "Válidos",
+            "Antigüedad",
             "Bajo mínimo",
             "Sin ingresar",
             "Remuneración total",
         ],
         filas_tramos,
-        {3, 4, 5, 6, 7, 8},
+        {3, 4, 5, 6, 7, 8, 9, 10},
     )
 
     tabla_consolidado = _tabla(

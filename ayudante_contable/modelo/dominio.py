@@ -304,6 +304,9 @@ class TramoServicio:
     meses_sin_aporte_ingresado: int
     meses_bajo_minimo: int
     remuneracion_total: Decimal
+    # Meses del tramo que efectivamente computan como aporte válido. Es el dato
+    # que va al formulario: los declarados incluyen los que no computan.
+    meses_computables: int = 0
 
     @property
     def meses_calendario(self) -> int:
@@ -313,6 +316,15 @@ class TramoServicio:
     @property
     def meses_faltantes(self) -> int:
         return self.meses_calendario - self.meses_declarados
+
+    @property
+    def meses_no_computables(self) -> int:
+        return self.meses_declarados - self.meses_computables
+
+    @property
+    def antiguedad_texto(self) -> str:
+        anios, meses = divmod(self.meses_computables, 12)
+        return f"{anios}a {meses}m"
 
     @property
     def continuo(self) -> bool:

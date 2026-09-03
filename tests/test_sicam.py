@@ -84,12 +84,12 @@ class PruebasCruceAltaContraDeuda(unittest.TestCase):
                 PeriodoRevista(
                     inicio=periodo("01/2020"),
                     cese=periodo("06/2020"),
-                    codigo_actividad="11",
+                    codigo_actividad="103",
                 ),
                 PeriodoRevista(
                     inicio=periodo("01/2021"),
                     cese=periodo("03/2021"),
-                    codigo_actividad="11",
+                    codigo_actividad="103",
                     beneficio_desde=periodo("01/2021"),
                     beneficio_hasta=periodo("02/2021"),
                     tipo_beneficio="Art. 1 Ley 25321",
@@ -209,3 +209,46 @@ class PruebasCruceAltaContraDeuda(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PruebasCodigoNoAportante(unittest.TestCase):
+    """El código de actividad 11 declara actividad pero no genera aporte."""
+
+    def _historia(self, codigo: str, deuda: LecturaDeuda | None = None):
+        revista = LecturaRevista(
+            periodos=[
+                PeriodoRevista(
+                    inicio=periodo("01/2020"),
+                    cese=periodo("06/2020"),
+                    codigo_actividad=codigo,
+                )
+            ]
+        )
+        return sicam.historia_desde_sicam(revista, deuda, "20-12345678-6")
+
+    def test_un_tramo_con_codigo_11_no_genera_meses(self):
+        self.assertEqual(len(self._historia("11").registros), 0)
+
+    def test_un_tramo_con_codigo_aportante_si_genera_meses(self):
+        self.assertEqual(len(self._historia("103").registros), 6)
+
+    def test_avisa_por_los_meses_excluidos(self):
+        historia = self._historia("11")
+        self.assertTrue(
+            any("no aportante" in a for a in historia.advertencias_origen),
+            historia.advertencias_origen,
+        )
+
+    def test_un_renglon_de_deuda_rescata_el_mes_aunque_el_codigo_no_aporte(self):
+        """Si hay deuda registrada, hubo obligación: el mes vuelve al cómputo."""
+        deuda = LecturaDeuda(
+            filas=[
+                FilaDeuda(
+                    desde=periodo("03/2020"),
+                    hasta=periodo("04/2020"),
+                    total=Decimal("0"),
+                )
+            ]
+        )
+        meses = {r.periodo for r in self._historia("11", deuda).registros}
+        self.assertEqual(meses, {periodo("03/2020"), periodo("04/2020")})
