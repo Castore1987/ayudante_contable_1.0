@@ -133,11 +133,11 @@ class PruebasFusion(unittest.TestCase):
         """El HLAB trunca el nombre del empleador; ARCA lo trae entero."""
         resultado = consolidar(
             [
-                historia("hlab:x", registro(ENERO, empleador="LA LACTEO SOCIEDAD AN")),
-                historia("arca:y", registro(ENERO, empleador="LA LACTEO SOCIEDAD ANONIMA")),
+                historia("hlab:x", registro(ENERO, empleador="INDUSTRIAS DEL SUR SOC")),
+                historia("arca:y", registro(ENERO, empleador="INDUSTRIAS DEL SUR SOCIEDAD ANONIMA")),
             ]
         )
-        self.assertEqual(resultado.historia.registros[0].empleador, "LA LACTEO SOCIEDAD ANONIMA")
+        self.assertEqual(resultado.historia.registros[0].empleador, "INDUSTRIAS DEL SUR SOCIEDAD ANONIMA")
 
     def test_los_regimenes_distintos_no_se_fusionan(self):
         resultado = consolidar(

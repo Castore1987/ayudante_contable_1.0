@@ -46,9 +46,9 @@ Ninguna alcanza sola, y cada una es buena en algo distinto:
 Se combinan en un solo informe:
 
 ```bash
-ayudante-contable analizar --cuil 23-14366086-9 \
-  --hlab HLAB_23143660869.pdf \
-  --arca Historico23143660869.xls \
+ayudante-contable analizar --cuil 20-12345678-6 \
+  --hlab HLAB_20123456786.pdf \
+  --arca Historico20123456786.xls \
   --sicam-revista revista.pdf --sicam-deuda deuda.pdf \
   --todo
 ```
